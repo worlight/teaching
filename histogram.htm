@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成績展示小助手</title> 
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Universal box-sizing for predictable layout */
+        html {
+            box-sizing: border-box;
+            width: 100%; /* Ensure html takes full width */
+            height: 100%; /* Ensure html takes full height */
+            overflow-x: hidden; /* Prevent horizontal scrollbar on the html element */
+        }
+        *, *::before, *::after {
+            box-sizing: inherit;
+        }
+
+        :root {
+            --primary-color: #4A90E2; 
+            --secondary-color: #50E3C2; 
+            --accent-color: #F5A623; 
+            --background-color: #F8F9FA;
+            --card-background: #FFFFFF;
+            --text-color: #34495E; 
+            --border-color: #DEE2E6;
+            
+            /* Define distinct default colors for bars - now extensible */
+            --bar-default-color-1: #A0C4FF; /* Light Blue */
+            --bar-default-color-2: #BEE3F8; /* Sky Blue */
+            --bar-default-color-3: #D4ECDD; /* Mint Green */
+            --bar-default-color-4: #FFE0B2; /* Peach */
+            --bar-default-color-5: #FFADAD; /* Light Red */
+            --bar-default-color-6: #FFD6A5; /* Light Orange */
+            --bar-default-color-7: #FDFFB6; /* Light Yellow */
+            --bar-default-color-8: #CAFFBF; /* Light Green */
+            --bar-default-color-9: #9BF6FF; /* Cyan */
+            --bar-default-color-10: #A0C4FF; /* Repeat for more colors if needed, or define more */
+            --bar-default-color-11: #BDB2FF;
+            --bar-default-color-12: #FFC6FF;
+            --bar-default-color-13: #E6E6FA;
+            --bar-default-color-14: #FFFACD;
+            --bar-default-color-15: #ADD8E6;
+            --bar-default-color-16: #D3D3D3;
+
+
+            --max-bar-visual-height: 350px; /* Reduced from 450px */
+            --min-bar-visual-height: 5px; 
+            --bar-width: 80px; /* Fixed bar width */
+            --bar-spacing: 30px; /* Slightly reduced spacing for more bars */
+            --value-display-area-height: 30px; 
+            --animation-duration: 1.5s; /* Bar height animation duration */
+            --announcement-delay-after-bars: 2s; /* New: Delay before announcement appears */
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            color: var(--text-color);
+            overflow-x: hidden; /* Prevent horizontal scrollbar on the body element */
+            font-size: 0.85em; /* Reduced font size */
+        }
+
+        header {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 15px 0; /* Reduced padding */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            font-size: 1.8em; /* Reduced font size */
+        }
+
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 80px; /* Reduced padding-top */
+            padding-bottom: 30px; /* Reduced padding-bottom */
+            flex-grow: 1;
+            width: 100%;
+            overflow-x: hidden; 
+        }
+
+        .chart-controls {
+            background-color: var(--card-background);
+            padding: 15px 20px; /* Reduced padding */
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px; /* Reduced margin-bottom */
+            display: flex;
+            flex-direction: row; /* Changed to row for horizontal layout */
+            flex-wrap: wrap; /* Allow wrapping */
+            gap: 10px; /* Reduced gap */
+            align-items: center; 
+            justify-content: center; 
+            width: auto; 
+            max-width: 95vw; 
+        }
+
+        .chart-controls .control-group { 
+            display: flex;
+            align-items: center;
+            gap: 5px; /* Reduced gap */
+            flex-shrink: 0; /* Prevent shrinking too much */
+            white-space: nowrap; /* Keep label and input on one line */
+        }
+        
+        .chart-controls label {
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 0.95em; /* Reduced font size */
+            white-space: nowrap; 
+        }
+
+        .chart-controls input[type="number"] {
+            width: 70px; /* Reduced width */
+            padding: 6px; /* Reduced padding */
+            font-size: 0.9em; /* Reduced font size */
+            text-align: center;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .chart-controls input[type="number"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.25);
+            outline: none;
+        }
+
+        .chart-container {
+            display: flex;
+            gap: var(--bar-spacing);
+            margin-bottom: 15px; /* Reduced from 40px */
+            align-items: flex-end; 
+            background-color: var(--card-background);
+            padding: 20px; /* Reduced padding */
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+            min-height: calc(var(--max-bar-visual-height) + var(--value-display-area-height) + 60px); /* Reduced min-height */
+            position: relative;
+            overflow-x: auto; 
+            overflow-y: hidden; 
+            padding-bottom: 10px; 
+            max-width: 95vw; 
+            flex-wrap: nowrap; 
+            justify-content: flex-start; 
+        }
+
+        .bar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            height: calc(var(--max-bar-visual-height) + var(--value-display-area-height)); 
+            justify-content: flex-end; 
+            padding-bottom: 0;
+            flex-shrink: 0; 
+            transition: transform 0.3s ease-out; 
+        }
+
+        .bar-wrapper.bounce {
+            animation: bounce 0.6s ease-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); } 
+        }
+
+
+        .bar-value-display-container {
+            width: var(--bar-width); 
+            height: var(--value-display-area-height); 
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px; 
+            opacity: 0; 
+            transition: opacity 0.5s ease-in-out; 
+        }
+
+        .bar-value {
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 1.1em; /* Reduced font size */
+            text-shadow: 0 0 5px rgba(255,255,255,0.7);
+        }
+
+        .bar {
+            width: var(--bar-width); 
+            border-radius: 10px 10px 0 0;
+            position: relative;
+            height: var(--min-bar-visual-height); 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transform-origin: bottom; 
+            transition: height var(--animation-duration) ease-out, background-color 0.5s ease; 
+        }
+
+        .input-style {
+            width: var(--bar-width); 
+            padding: 6px; /* Reduced padding */
+            font-size: 0.9em; /* Reduced font size */
+            text-align: center;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            margin-bottom: 5px;
+        }
+
+        .input-style:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.25);
+            outline: none;
+        }
+
+        .bar-name-input {
+            margin-top: 5px; 
+        }
+
+        .value-input-field {
+            margin-top: 5px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px; /* Reduced gap */
+            margin-top: 10px; /* Reduced from 20px */
+            margin-bottom: 20px; /* Reduced from 30px */
+        }
+
+        button {
+            padding: 10px 20px; /* Reduced padding */
+            font-size: 0.95em; /* Reduced font size */
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            gap: 8px; 
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        #displayScoresButton { 
+            background-color: var(--primary-color);
+        }
+
+        #displayScoresButton:hover { 
+            background-color: #3A7CD0;
+        }
+
+        #resetAllButton { 
+            background-color: #DC3545;
+        }
+
+        #resetAllButton:hover { 
+            background-color: #C82333;
+        }
+        
+        #resetValuesButton { 
+            background-color: #6C757D; 
+        }
+        
+        #resetValuesButton:hover { 
+            background-color: #5A6268;
+        }
+
+        #generateChartButton {
+            background-color: #28A745;
+        }
+        #generateChartButton:hover {
+            background-color: #218838;
+        }
+
+        .emoji {
+            font-size: 1.1em; /* Reduced font size */
+            line-height: 1; 
+        }
+
+        /* --- Top Result Announcement Styles --- */
+        #topResultsAnnouncement {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px 40px; /* Reduced padding */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+            max-width: 80vw;
+            min-width: 280px; /* Reduced min-width */
+            box-sizing: border-box;
+            border: 3px solid var(--accent-color);
+            transform-origin: center;
+        }
+
+        #topResultsAnnouncement.active {
+            opacity: 1;
+            visibility: visible;
+            animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .announcement-title {
+            font-size: 2.2em; /* Reduced font size */
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 15px; /* Reduced margin-bottom */
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .rank-item {
+            font-size: 1.6em; /* Reduced font size */
+            font-weight: bold;
+            color: var(--text-color);
+            margin-bottom: 8px; /* Reduced margin-bottom */
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Reduced gap */
+        }
+
+        .rank-item.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .rank-icon {
+            font-size: 1.4em; /* Reduced font size */
+            margin-right: 5px;
+        }
+
+        .congratulations-message {
+            font-size: 1.4em; /* Reduced font size */
+            font-weight: 700;
+            color: var(--accent-color);
+            margin-top: 20px; /* Reduced margin-top */
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+            text-shadow: 0 0 8px rgba(245, 166, 35, 0.5);
+        }
+
+        .congratulations-message.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Specific colors for top ranks if desired */
+        .rank-1 .rank-icon { color: gold; }
+        .rank-2 .rank-icon { color: silver; }
+        .rank-3 .rank-icon { color: #CD7F32; /* Bronze */ }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>成績展示小助手 <span class="emoji">📊</span></h1> 
+    </header>
+
+    <div class="content-wrapper">
+        <div class="chart-controls">
+            <div class="control-group">
+                <label for="barCountInput">棒條數量 (1-16):</label>
+                <input type="number" id="barCountInput" min="1" max="16" value="4" tabindex="1">
+            </div>
+            <div class="control-group">
+                <label for="minValueInput">數值最低值 (0-1000):</label>
+                <input type="number" id="minValueInput" min="0" max="1000" value="0" tabindex="2">
+            </div>
+            <div class="control-group">
+                <label for="maxValueInput">數值最高值 (0-1000):</label>
+                <input type="number" id="maxValueInput" min="0" max="1000" value="100" tabindex="3"> 
+            </div>
+            <button id="generateChartButton" tabindex="4"><span class="emoji">📈</span> 生成圖表</button>
+        </div>
+
+        <div class="chart-container" id="chartContainer">
+            </div>
+
+        <div class="controls">
+            <button id="displayScoresButton" tabindex="1001"><span class="emoji">✨</span> 成績展示</button> 
+            <button id="resetAllButton" tabindex="1002"><span class="emoji">🗑️</span> 重設所有</button>
+            <button id="resetValuesButton" tabindex="1003"><span class="emoji">🔢</span> 重設數值</button>
+        </div>
+    </div>
+
+    <div id="topResultsAnnouncement">
+        <h2 class="announcement-title">成績公佈！</h2>
+        <div id="rankResults">
+            </div>
+        <p class="congratulations-message"></p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let inputs = []; // For value inputs
+            let bars = [];
+            let valuesDisplay = []; 
+            let valueDisplayContainers = []; 
+            let nameInputs = []; // For name inputs
+            let barWrappers = []; // To easily access bar-wrapper elements for animations
+
+            const maxBarVisualHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--max-bar-visual-height'));
+            const minBarVisualHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--min-bar-visual-height'));
+            const animationDurationMs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--animation-duration')) * 1000; 
+            const announcementDelayAfterBarsMs = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--announcement-delay-after-bars')) * 1000; 
+            
+            const defaultColors = [
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-1'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-2'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-3'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-4'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-5'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-6'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-7'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-8'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-9'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-10'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-11'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-12'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-13'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-14'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-15'),
+                getComputedStyle(document.documentElement).getPropertyValue('--bar-default-color-16')
+            ].filter(color => color && color.trim() !== ''); 
+
+
+            const chartContainer = document.getElementById('chartContainer');
+            const barCountInput = document.getElementById('barCountInput');
+            const minValueInput = document.getElementById('minValueInput'); 
+            const maxValueInput = document.getElementById('maxValueInput'); 
+            const generateChartButton = document.getElementById('generateChartButton');
+            const displayScoresButton = document.getElementById('displayScoresButton'); 
+            const resetAllButton = document.getElementById('resetAllButton');
+            const resetValuesButton = document.getElementById('resetValuesButton');
+
+            const topResultsAnnouncement = document.getElementById('topResultsAnnouncement');
+            const rankResultsDiv = document.getElementById('rankResults');
+            const congratulationsMessage = topResultsAnnouncement.querySelector('.congratulations-message');
+
+            let currentMinValue; 
+            let currentMaxValue; 
+
+
+            function updateAsteriskDisplay(inputElement, actualValueString) {
+                inputElement.value = '*'.repeat(actualValueString.length);
+                inputElement.dataset.actualValue = actualValueString;
+            }
+
+            function setupInputListeners(valueInput, nameInput) { 
+                valueInput.dataset.actualValue = ''; 
+
+                valueInput.addEventListener('focus', (event) => {
+                    if (event.target.value.includes('*')) { 
+                        event.target.value = '';
+                    }
+                    event.target.dataset.actualValue = '';
+                });
+
+                valueInput.addEventListener('input', (event) => {
+                    const enteredChar = event.data;
+                    let currentActualValue = event.target.dataset.actualValue || '';
+                    let newValue = currentActualValue;
+
+                    if (event.inputType === 'deleteContentBackward' || event.inputType === 'deleteContentForward') {
+                        newValue = currentActualValue.slice(0, -1);
+                    } else if (enteredChar && /^\d$/.test(enteredChar)) {
+                        newValue += enteredChar;
+                    } else {
+                        updateAsteriskDisplay(valueInput, currentActualValue);
+                        return;
+                    }
+
+                    if (newValue !== '') { 
+                        const numValue = parseInt(newValue, 10);
+                        if (isNaN(numValue) || numValue < currentMinValue || numValue > currentMaxValue) {
+                            alert(`請輸入介於 ${currentMinValue} 到 ${currentMaxValue} 之間的數值。`);
+                            updateAsteriskDisplay(valueInput, currentActualValue); 
+                            return;
+                        }
+                    }
+                    
+                    updateAsteriskDisplay(valueInput, newValue);
+                });
+
+                valueInput.addEventListener('paste', (event) => {
+                    event.preventDefault();
+                    const pasteData = event.clipboardData.getData('text');
+                    const cleanData = pasteData.replace(/\D/g, '');
+                    
+                    let currentActualValue = valueInput.dataset.actualValue || '';
+                    let pastedValueCandidate = (currentActualValue + cleanData);
+
+                    if (pastedValueCandidate !== '') {
+                        const numValue = parseInt(pastedValueCandidate, 10);
+                        if (isNaN(numValue) || numValue < currentMinValue || numValue > currentMaxValue) {
+                            alert(`貼上的數值超出 ${currentMinValue} 到 ${currentMaxValue} 範圍或包含非數字字符。`);
+                            updateAsteriskDisplay(valueInput, currentActualValue); 
+                            return;
+                        }
+                    }
+                    updateAsteriskDisplay(valueInput, pastedValueCandidate);
+                });
+
+                nameInput.addEventListener('focus', (event) => {
+                    event.target.value = ''; 
+                });
+            }
+
+            function generateBars(count) {
+                chartContainer.innerHTML = '';
+                inputs = [];
+                bars = [];
+                valuesDisplay = [];
+                valueDisplayContainers = [];
+                nameInputs = [];
+                barWrappers = []; 
+
+                currentMinValue = parseInt(minValueInput.value, 10);
+                currentMaxValue = parseInt(maxValueInput.value, 10);
+
+                if (isNaN(currentMinValue) || currentMinValue < 0 || currentMinValue > 1000 ||
+                    isNaN(currentMaxValue) || currentMaxValue < 0 || currentMaxValue > 1000) {
+                    alert('數值範圍輸入無效！請輸入 0 到 1000 之間的數字。將重設為預設值。');
+                    minValueInput.value = 0;
+                    maxValueInput.value = 100; 
+                    currentMinValue = 0; 
+                    currentMaxValue = 100; 
+                }
+                if (currentMinValue >= currentMaxValue) {
+                    alert('數值最低值必須小於數值最高值！將重設為預設值。');
+                    minValueInput.value = 0;
+                    maxValueInput.value = 100; 
+                    minVal = 0; maxVal = 100; 
+                }
+
+                let currentTabIndex = 5; 
+
+                for (let i = 0; i < count; i++) {
+                    const barWrapper = document.createElement('div');
+                    barWrapper.className = 'bar-wrapper';
+
+                    const valueDisplayContainer = document.createElement('div');
+                    valueDisplayContainer.className = 'bar-value-display-container';
+                    
+                    const valueSpan = document.createElement('span');
+                    valueSpan.className = 'bar-value';
+                    valueDisplayContainer.appendChild(valueSpan);
+
+                    const barDiv = document.createElement('div');
+                    barDiv.className = 'bar';
+                    barDiv.style.backgroundColor = defaultColors[i % defaultColors.length]; 
+
+                    const nameInput = document.createElement('input');
+                    nameInput.type = 'text';
+                    nameInput.className = 'bar-name-input input-style';
+                    nameInput.placeholder = `📌 項目 ${i + 1}`; 
+                    nameInput.value = `📌 項目 ${i + 1}`; // Explicitly set initial value
+                    nameInput.tabIndex = currentTabIndex++; 
+
+                    const valueInput = document.createElement('input');
+                    valueInput.type = 'text'; 
+                    valueInput.placeholder = `🔢 ${currentMinValue}-${currentMaxValue}`; 
+                    valueInput.className = 'value-input-field input-style';
+                    valueInput.tabIndex = 0; 
+
+                    barWrapper.appendChild(valueDisplayContainer);
+                    barWrapper.appendChild(barDiv);
+                    barWrapper.appendChild(nameInput);
+                    barWrapper.appendChild(valueInput);
+
+                    chartContainer.appendChild(barWrapper);
+
+                    inputs.push(valueInput);
+                    bars.push(barDiv);
+                    valuesDisplay.push(valueSpan);
+                    valueDisplayContainers.push(valueDisplayContainer);
+                    nameInputs.push(nameInput);
+                    barWrappers.push(barWrapper); 
+
+                    setupInputListeners(valueInput, nameInput); 
+                }
+
+                let valueInputTabIndexStart = currentTabIndex; 
+                inputs.forEach((input, index) => {
+                    input.tabIndex = valueInputTabIndexStart + index;
+                });
+                
+                const lastValueInputTabIndex = inputs.length > 0 ? inputs[inputs.length - 1].tabIndex : generateChartButton.tabIndex;
+                displayScoresButton.tabIndex = lastValueInputTabIndex + 1;
+                resetAllButton.tabIndex = lastValueInputTabIndex + 2;
+                resetValuesButton.tabIndex = lastValueInputTabIndex + 3;
+
+                resetAll(); 
+            }
+
+            function resetValuesOnly() {
+                inputs.forEach((input, index) => {
+                    input.value = '';
+                    input.dataset.actualValue = '';
+                    input.placeholder = `🔢 ${currentMinValue}-${currentMaxValue}`; 
+                    
+                    bars[index].style.height = `${minBarVisualHeight}px`; 
+                    bars[index].style.backgroundColor = defaultColors[index % defaultColors.length]; 
+                    valueDisplayContainers[index].style.opacity = 0; 
+                    barWrappers[index].classList.remove('bounce'); 
+                });
+            }
+
+            function resetAll() {
+                resetValuesOnly(); 
+                nameInputs.forEach((input, index) => {
+                    input.value = `📌 項目 ${index + 1}`; 
+                });
+            }
+
+            displayScoresButton.addEventListener('click', () => { 
+                let maxInputValueInCurrentChart = 0; 
+                const actualValues = [];
+                const barData = []; 
+
+                currentMinValue = parseInt(minValueInput.value, 10);
+                currentMaxValue = parseInt(maxValueInput.value, 10);
+
+                if (isNaN(currentMinValue) || currentMinValue < 0 || currentMinValue > 1000 ||
+                    isNaN(currentMaxValue) || currentMaxValue < 0 || currentMaxValue > 1000) {
+                    alert('數值範圍輸入無效！請輸入 0 到 1000 之間的數字。將重設為預設值。');
+                    minValueInput.value = 0;
+                    maxValueInput.value = 100;
+                    currentMinValue = 0;
+                    currentMaxValue = 100;
+                    inputs.forEach(input => {
+                        input.placeholder = `🔢 ${currentMinValue}-${currentMaxValue}`; 
+                    });
+                    return; 
+                }
+                if (currentMinValue >= currentMaxValue) {
+                    alert('數值最低值必須小於數值最高值！將重設為預設值。');
+                    minValueInput.value = 0;
+                    maxValueInput.value = 100;
+                    currentMinValue = 0;
+                    currentMaxValue = 100;
+                     inputs.forEach(input => {
+                        input.placeholder = `🔢 ${currentMinValue}-${currentMaxValue}`; 
+                    });
+                    return; 
+                }
+
+                // Check for validation before proceeding with animations
+                let validationFailed = false;
+                inputs.forEach((input) => {
+                    const value = input.dataset.actualValue === '' ? currentMinValue : parseInt(input.dataset.actualValue, 10);
+                    if (value < currentMinValue || value > currentMaxValue) {
+                        alert(`有棒條的數值 (${value}) 超出當前設定的範圍 ${currentMinValue}-${currentMaxValue}，請更正。`);
+                        validationFailed = true;
+                    }
+                });
+                if (validationFailed) {
+                    return; 
+                }
+
+                // Collect data after validation
+                bars.forEach((bar, index) => { 
+                    const value = inputs[index].dataset.actualValue === '' ? currentMinValue : parseInt(inputs[index].dataset.actualValue, 10);
+                    const name = nameInputs[index].value || `項目 ${index + 1}`;
+
+                    actualValues.push(value);
+                    barData.push({ name: name, value: value, index: index }); 
+                    if (value > maxInputValueInCurrentChart) {
+                        maxInputValueInCurrentChart = value;
+                    }
+                });
+
+                barWrappers.forEach((wrapper, index) => {
+                    wrapper.classList.remove('bounce');
+                    bars[index].style.backgroundColor = defaultColors[index % defaultColors.length];
+                });
+
+
+                const effectiveRange = currentMaxValue - currentMinValue;
+                
+                // Promises to track completion of bar height animations
+                const barAnimationPromises = [];
+
+                bars.forEach((bar, index) => {
+                    const currentActualValue = actualValues[index];
+                    const valueDisplay = valuesDisplay[index];
+                    const displayContainer = valueDisplayContainers[index]; 
+
+                    displayContainer.style.opacity = 0; 
+
+                    let targetBarHeight;
+                    if (effectiveRange === 0) {
+                        targetBarHeight = minBarVisualHeight;
+                    } else if (currentActualValue <= currentMinValue) { 
+                        targetBarHeight = minBarVisualHeight;
+                    } else {
+                        const normalizedValue = currentActualValue - currentMinValue;
+                        targetBarHeight = minBarVisualHeight + (normalizedValue / effectiveRange) * (maxBarVisualHeight - minBarVisualHeight);
+                        targetBarHeight = Math.min(maxBarVisualHeight, targetBarHeight);
+                    }
+                    
+                    bar.style.height = `${targetBarHeight}px`;
+
+                    if (currentActualValue <= currentMinValue) { 
+                         bar.style.backgroundColor = defaultColors[index % defaultColors.length];
+                    }
+
+                    valueDisplay.textContent = currentActualValue;
+                    
+                    // Create a promise for each bar's animation completion
+                    const barPromise = new Promise(resolve => {
+                        setTimeout(() => {
+                            displayContainer.style.opacity = 1; 
+                            resolve(); 
+                        }, animationDurationMs); // Resolve when bar height and value opacity animation completes
+                    });
+                    barAnimationPromises.push(barPromise);
+                });
+
+                // --- Announce Top 3 Results ONLY AFTER all bars have finished their height animation + delay ---
+                Promise.all(barAnimationPromises).then(() => {
+                    setTimeout(() => { // Delay before starting the announcement
+                        if (barData.length === 0) return; // No bars to announce
+
+                        barData.sort((a, b) => b.value - a.value);
+
+                        rankResultsDiv.innerHTML = ''; 
+                        congratulationsMessage.textContent = ''; 
+                        topResultsAnnouncement.classList.add('active'); 
+
+                        const ranks = ['冠軍', '亞軍', '季軍'];
+                        const rankEmojis = ['🏆', '🥈', '🥉'];
+                        let rankCounter = 0; // Tracks the current distinct rank (1st, 2nd, 3rd)
+                        let lastValue = -1; // Stores the value of the previous ranked item
+
+                        const animationPromises = [];
+                        const itemsToDisplay = []; // Collect items that qualify for top 3 distinct ranks
+
+                        for (let i = 0; i < barData.length; i++) {
+                            const item = barData[i];
+                            const barIndex = item.index;
+
+                            if (item.value !== lastValue) {
+                                // New distinct score, increment the rank counter
+                                rankCounter++;
+                            }
+
+                            if (rankCounter <= 3) { // Only collect if it falls within top 3 distinct ranks
+                                itemsToDisplay.push({
+                                    item: item,
+                                    rank: rankCounter,
+                                    barIndex: barIndex
+                                });
+                            } else {
+                                // If rankCounter is > 3, it means we've found a 4th distinct score or lower.
+                                // We can stop processing further items as they won't be in the top 3 ranks.
+                                break; 
+                            }
+
+                            lastValue = item.value; 
+                        }
+
+                        // Now iterate through itemsToDisplay to create divs and animations
+                        let animationDelay = 0;
+                        let lastDisplayedRank = 0;
+
+                        itemsToDisplay.forEach((data) => {
+                            const item = data.item;
+                            const currentRank = data.rank;
+                            const barIndex = data.barIndex;
+
+                            // Only update animation delay if it's a new distinct rank being displayed
+                            if (currentRank !== lastDisplayedRank) {
+                                animationDelay = 800 * (currentRank - 1); 
+                                lastDisplayedRank = currentRank;
+                            }
+
+                            const rankItemDiv = document.createElement('div');
+                            rankItemDiv.className = `rank-item rank-${currentRank}`; 
+                            rankItemDiv.innerHTML = `<span class="rank-icon">${rankEmojis[currentRank - 1]}</span> ${ranks[currentRank - 1]} 是: ${item.name} (${item.value} 分)`;
+                            rankResultsDiv.appendChild(rankItemDiv);
+
+                            if (barWrappers[barIndex]) {
+                                barWrappers[barIndex].classList.add('bounce');
+                            }
+
+                            const promise = new Promise(resolve => {
+                                setTimeout(() => {
+                                    rankItemDiv.classList.add('show');
+                                    resolve();
+                                }, animationDelay); // Use the calculated animationDelay
+                            });
+                            animationPromises.push(promise);
+                        });
+
+
+                        Promise.all(animationPromises).then(() => {
+                            const message = "恭喜獲獎者！🥳";
+                            congratulationsMessage.textContent = message;
+                            congratulationsMessage.classList.add('show');
+
+                            setTimeout(() => {
+                                topResultsAnnouncement.classList.remove('active');
+                                topResultsAnnouncement.classList.remove('popIn'); 
+                                setTimeout(() => {
+                                    rankResultsDiv.innerHTML = '';
+                                    congratulationsMessage.textContent = '';
+                                }, 500); // Clear content after the transition
+                            }, 3000); // Announcement stays for 3 seconds after ranks are shown
+                        });
+                    }, announcementDelayAfterBarsMs); // This is the new delay
+                });
+            });
+
+            generateChartButton.addEventListener('click', () => {
+                let count = parseInt(barCountInput.value, 10);
+                if (isNaN(count) || count < 1 || count > 16) {
+                    alert('請輸入 1 到 16 之間的棒條數量！');
+                    barCountInput.value = 4; 
+                    count = 4;
+                }
+
+                let minVal = parseInt(minValueInput.value, 10);
+                let maxVal = parseInt(maxValueInput.value, 10);
+
+                if (isNaN(minVal) || minVal < 0 || minVal > 1000 ||
+                    isNaN(maxVal) || maxVal < 0 || maxVal > 1000) {
+                    alert('數值範圍輸入無效！請輸入 0 到 1000 之間的數字。將重設為預設值。');
+                    minValueInput.value = 0;
+                    maxValueInput.value = 100; 
+                    minVal = 0; maxVal = 100; 
+                }
+                if (minVal >= maxVal) {
+                    alert('數值最低值必須小於數值最高值！將重設為預設值。');
+                    minValueInput.value = 0;
+                    maxValueInput.value = 100; 
+                    minVal = 0; maxVal = 100; 
+                }
+
+                currentMinValue = minVal;
+                currentMaxValue = maxVal;
+
+                generateBars(count); 
+            });
+
+            resetAllButton.addEventListener('click', resetAll);
+            resetValuesButton.addEventListener('click', resetValuesOnly);
+            
+            currentMinValue = parseInt(minValueInput.value, 10);
+            currentMaxValue = parseInt(maxValueInput.value, 10);
+            generateBars(parseInt(barCountInput.value, 10)); 
+        });
+    </script>
+
+</body>
+</html>

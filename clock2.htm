@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日系圓形時鐘與時間語錄</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;700&family=Merriweather:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS for the analog clock */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* 淺色紋理背景 */
+            background-color: #f0ede8; /* 淺米色作為基礎色 */
+            background-image: url('https://placehold.co/100x100/f0ede8/f0ede8?text='); /* 淺色木紋紋理圖片，可替換為實際紋理 */
+            background-repeat: repeat; /* 重複圖片以覆蓋整個背景 */
+            padding: 1rem;
+        }
+
+        .quote-container {
+            min-height: 100px; /* Ensure space even when quote is fading */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .quote-display {
+            font-size: clamp(1.2rem, 4vw, 1.8rem); /* Responsive font size for quote */
+            font-weight: 500;
+            color: #333;
+            text-align: center;
+            margin-bottom: 0.5rem; /* Reduced margin to bring source closer */
+            line-height: 1.6;
+            padding: 0 1rem;
+            font-family: 'Playfair Display', serif; /* 藝術性字體 */
+            opacity: 1; /* Default state */
+            transition: opacity 0.8s ease-in-out; /* Smooth transition for opacity */
+        }
+
+        .quote-display.fade-out {
+            opacity: 0;
+        }
+
+        .quote-source {
+            font-size: clamp(0.8rem, 2.5vw, 1.1rem); /* Smaller font size for source */
+            color: #666;
+            text-align: right; /* Align to the right */
+            width: 100%; /* Take full width to allow right alignment */
+            max-width: 800px; /* Match max-width of quote-display */
+            padding-right: 1rem; /* Add padding to match quote-display */
+            margin-top: 0; /* No extra margin top */
+        }
+
+        .clock-container {
+            position: relative;
+            width: 80vw; /* Responsive width */
+            height: 80vw; /* Keep aspect ratio */
+            max-width: 400px; /* Max width for larger screens */
+            max-height: 400px; /* Max height for larger screens */
+            border-radius: 50%;
+            /* 淺木紋顏色 */
+            background: var(--clock-outer-color, linear-gradient(to bottom right, #D2B48C, #DEB887)); /* 使用CSS變數 */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), 0 0 0 10px rgba(0, 0, 0, 0.05); /* 正常柔和陰影 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 2rem;
+            overflow: hidden; /* Ensure content stays within bounds */
+        }
+
+        .clock-face {
+            position: relative;
+            width: 90%; /* Inner white face */
+            height: 90%;
+            border-radius: 50%;
+            background-color: #FFFFFF; /* White clock face */
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05); /* 正常柔和內陰影 */
+        }
+
+        .clock-face-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-size: cover; /* 覆蓋整個圓形鐘面 */
+            background-position: center; /* 圖片居中 */
+            background-repeat: no-repeat;
+            opacity: var(--image-opacity, 0.3); /* 預設透明度，可調整 */
+            z-index: 1; /* 在鐘面數字、刻度、指針下方 */
+        }
+
+        /* 數字的樣式與定位修正 (更穩健的徑向佈局) */
+        .number {
+            position: absolute;
+            font-size: var(--number-font-size, clamp(1rem, 4vw, 1.5rem)); /* 使用CSS變數 */
+            font-weight: 600;
+            color: #555; /* 數字顏色為柔和的深灰色 */
+            z-index: 5; /* 確保數字在鐘面之上，刻度之下 */
+            display: flex; /* 使用 flexbox 幫助內容居中 */
+            justify-content: center;
+            align-items: center;
+            /* 初始定位：將每個數字的中心點移到鐘面中心 */
+            top: 50%;
+            left: 50%;
+            /* 使用 calc for rotation and translation based on --n */
+            transform: translate(-50%, -50%) rotate(calc(var(--n) * 30deg)) translateY(-135px);
+            font-family: var(--number-font-family, 'Inter', sans-serif); /* 使用CSS變數 */
+        }
+
+        /* 數字文字本身的反向旋轉，使其保持直立 */
+        .number-text {
+            transform: rotate(calc(var(--n) * -30deg));
+        }
+
+        /* 線條刻度樣式 */
+        .mark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            z-index: 4; /* 在數字之下，指針之上 */
+        }
+
+        .hour-mark {
+            width: 3px;
+            height: 15px; /* 小時刻度較長 */
+            background-color: #888; /* 顏色稍深 */
+        }
+
+        .minute-mark {
+            width: 1px;
+            height: 8px; /* 分鐘刻度較短 */
+            background-color: #bbb; /* 顏色較淺 */
+        }
+
+        /* 小時刻度的旋轉與偏移 */
+        /* 使用 CSS 變數 --i 來控制每個刻度的旋轉角度 */
+        .hour-mark-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+        }
+        .hour-mark-line {
+            position: absolute;
+            width: 3px;
+            height: 15px; /* 小時刻度較長 */
+            background-color: #888; /* 顏色稍深 */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateY(-165px); /* 向外偏移 */
+        }
+
+        /* 分鐘刻度的旋轉與偏移 */
+        .minute-mark-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform-origin: center center;
+        }
+        .minute-mark-line {
+            position: absolute;
+            width: 1px;
+            height: 8px; /* 分鐘刻度較短 */
+            background-color: #bbb; /* 顏色較淺 */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateY(-168px); /* 向外偏移 */
+        }
+
+
+        /* Clock hands */
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            background-color: #333; /* Dark grey for hands */
+            border-radius: 5px;
+            z-index: 10; /* Ensure hands are on top */
+        }
+
+        .hour-hand {
+            width: var(--hour-hand-width, 4px); /* 使用CSS變數 */
+            height: 25%; /* Shortened hour hand */
+            background-color: #333;
+        }
+
+        .minute-hand {
+            width: var(--minute-hand-width, 3px); /* 使用CSS變數 */
+            height: 40%;
+            background-color: #555;
+        }
+
+        .second-hand {
+            width: var(--second-hand-width, 2px); /* 使用CSS變數 */
+            height: 45%;
+            background-color: #FF6347; /* Tomato red for second hand, slightly softer */
+            z-index: 11; /* Second hand on top of others */
+        }
+
+        .center-dot {
+            position: absolute;
+            width: 20px; /* 增大中心圓點 */
+            height: 20px; /* 增大中心圓點 */
+            /* 木紋圓形圖案 */
+            background: linear-gradient(to top left, #A0522D, #8B4513); /* Sienna to SaddleBrown for wood grain */
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 12; /* Center dot on top of all hands */
+            border: 3px solid #fff; /* 邊框更明顯 */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* 增加陰影效果 */
+        }
+
+        /* Digital display styling */
+        .digital-display {
+            /* 移除背景顏色 */
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            /* 調整陰影以配合無背景 */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            color: #333;
+            font-family: 'Inter', sans-serif; /* 改回正經字體 */
+            font-weight: 500;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 90vw;
+            max-width: 400px;
+        }
+
+        .digital-time {
+            font-size: clamp(1.5rem, 7vw, 2.5rem); /* 縮小字體 */
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .digital-date {
+            font-size: clamp(0.9rem, 3.5vw, 1.3rem); /* 縮小字體 */
+            color: #4a5568;
+        }
+
+        /* Ensure responsive positioning of numbers and marks */
+        @media (max-width: 640px) {
+            /* 在小螢幕上微調數字的偏移量，讓它們更靠近中心 */
+            .number {
+                transform: translate(-50%, -50%) rotate(calc(var(--n) * 30deg)) translateY(-110px); /* 調整為更小的負值 */
+            }
+            .hour-mark-line {
+                transform: translate(-50%, -50%) translateY(-135px);
+            }
+            .minute-mark-line {
+                transform: translate(-50%, -50%) translateY(-138px);
+            }
+        }
+
+        /* Settings button */
+        .settings-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: none; /* 移除背景 */
+            color: #4a90e2; /* 藍色齒輪圖案 */
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 30px; /* 增大字體以顯示更大的EMOJI */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: none; /* 移除陰影 */
+            cursor: pointer;
+            transition: transform 0.3s ease; /* 懸停效果 */
+            z-index: 100;
+        }
+
+        .settings-button:hover {
+            transform: scale(1.1); /* 懸停時放大 */
+        }
+
+        /* Settings Modal */
+        .settings-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .settings-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .settings-modal-content {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh; /* 縮小高度 */
+            overflow-y: auto; /* 垂直滾動條 */
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .settings-modal-overlay.active .settings-modal-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .settings-modal-content h2 {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .settings-modal-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .settings-modal-group label {
+            font-weight: 600;
+            color: #555;
+            font-size: 1rem;
+        }
+
+        .settings-modal-group input[type="number"],
+        .settings-modal-group input[type="color"],
+        .settings-modal-group select {
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: #333;
+            width: 100%;
+        }
+
+        .settings-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .settings-modal-actions button {
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .settings-modal-actions .cancel-btn {
+            background-color: #e0e0e0;
+            color: #555;
+            border: none;
+        }
+
+        .settings-modal-actions .cancel-btn:hover {
+            background-color: #d0d0d0;
+            transform: translateY(-1px);
+        }
+
+        .settings-modal-actions .apply-btn {
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+        }
+
+        .settings-modal-actions .apply-btn:hover {
+            background-color: #357ABD;
+            transform: translateY(-1px);
+        }
+
+        .settings-modal-actions .reset-btn {
+            background-color: #f44336; /* Red color for reset */
+            color: white;
+            border: none;
+        }
+
+        .settings-modal-actions .reset-btn:hover {
+            background-color: #d32f2f;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="quote-container">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 quote-display" id="timeQuoteDisplay">
+            </h1>
+        <div class="quote-source" id="quoteSource">錦泰時間語錄</div>
+    </div>
+
+
+    <div id="clockMode" class="flex flex-col items-center">
+        <div class="clock-container">
+            <div class="clock-face">
+                <div id="clockFaceImage" class="clock-face-image"></div>
+                <div class="number" style="--n:12;"><span class="number-text">12</span></div>
+                <div class="number" style="--n:1;"><span class="number-text">1</span></div>
+                <div class="number" style="--n:2;"><span class="number-text">2</span></div>
+                <div class="number" style="--n:3;"><span class="number-text">3</span></div>
+                <div class="number" style="--n:4;"><span class="number-text">4</span></div>
+                <div class="number" style="--n:5;"><span class="number-text">5</span></div>
+                <div class="number" style="--n:6;"><span class="number-text">6</span></div>
+                <div class="number" style="--n:7;"><span class="number-text">7</span></div>
+                <div class="number" style="--n:8;"><span class="number-text">8</span></div>
+                <div class="number" style="--n:9;"><span class="number-text">9</span></div>
+                <div class="number" style="--n:10;"><span class="number-text">10</span></div>
+                <div class="number" style="--n:11;"><span class="number-text">11</span></div>
+
+                <div id="hourMarksContainer"></div>
+
+                <div id="minuteMarksContainer"></div>
+
+                <div class="hand hour-hand" id="hourHand"></div>
+                <div class="hand minute-hand" id="minuteHand"></div>
+                <div class="hand second-hand" id="secondHand"></div>
+
+                <div class="center-dot"></div>
+            </div>
+        </div>
+
+        <div class="digital-display">
+            <div class="digital-time" id="digitalTime"></div>
+            <div class="digital-date" id="digitalDate"></div>
+        </div>
+    </div>
+
+    <button id="settingsBtn" class="settings-button">⚙️</button>
+
+    <div id="settingsModalOverlay" class="settings-modal-overlay">
+        <div class="settings-modal-content">
+            <h2>設定</h2>
+
+            <div class="settings-modal-group">
+                <label for="quoteInterval">時間語錄每隔多久轉換 (秒):</label>
+                <input type="number" id="quoteInterval" value="30" min="10">
+            </div>
+
+            <div class="settings-modal-group">
+                <label for="clockOuterColor">時鐘外框顏色:</label>
+                <input type="color" id="clockOuterColor" value="#D2B48C">
+            </div>
+
+            <div class="settings-modal-group">
+                <label for="numberFontFamily">鐘面數字字型:</label>
+                <select id="numberFontFamily">
+                    <option value="Inter, sans-serif">Inter (正經)</option>
+                    <option value="Playfair Display, serif">Playfair Display (藝術)</option>
+                    <option value="Noto Sans TC, sans-serif">思源黑體 (繁體)</option>
+                    <option value="Merriweather, serif">Merriweather (襯線)</option>
+                    <option value="Lora, serif">Lora (襯線)</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="Verdana, sans-serif">Verdana</option>
+                    <option value="Times New Roman, serif">Times New Roman</option>
+                </select>
+            </div>
+
+            <div class="settings-modal-group">
+                <label for="numberFontSize">鐘面數字字體大小 (px):</label>
+                <input type="number" id="numberFontSize" value="35" min="10" max="50">
+            </div>
+
+            <div class="settings-modal-group">
+                <label for="clockFaceImageSelect">鐘面背景圖案:</label>
+                <select id="clockFaceImageSelect">
+                    <option value="">無</option>
+                    <option value="xiaocaodi">小草地</option>
+                    <option value="xiaoyuanwaimao">校園外貌</option>
+                    <option value="biyeshijianlang">畢業時間廊</option>
+                    <option value="zhihuiquan">智慧泉</option>
+                </select>
+            </div>
+
+            <div class="settings-modal-group">
+                <label for="hourHandThickness">時針粗幼度 (px):</label>
+                <input type="number" id="hourHandThickness" value="7" min="1" max="10">
+            </div>
+
+            <div class="settings-modal-group">
+                <label for="minuteHandThickness">分針粗幼度 (px):</label>
+                <input type="number" id="minuteHandThickness" value="5" min="1" max="10">
+            </div>
+
+            <div class="settings-modal-group">
+                <label for="secondHandThickness">秒針粗幼度 (px):</label>
+                <input type="number" id="secondHandThickness" value="3" min="1" max="10">
+            </div>
+
+            <div class="settings-modal-actions">
+                <button class="reset-btn" id="resetSettingsBtn">還原預設</button>
+                <button class="cancel-btn" id="cancelSettingsBtn">取消</button>
+                <button class="apply-btn" id="applySettingsBtn">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Clock Mode Variables ---
+        const hourHand = document.getElementById('hourHand');
+        const minuteHand = document.getElementById('minuteHand');
+        const secondHand = document.getElementById('secondHand');
+        const digitalTime = document.getElementById('digitalTime');
+        const digitalDate = document.getElementById('digitalDate');
+        const hourMarksContainer = document.getElementById('hourMarksContainer');
+        const minuteMarksContainer = document.getElementById('minuteMarksContainer');
+        const timeQuoteDisplay = document.getElementById('timeQuoteDisplay');
+        const quoteSource = document.getElementById('quoteSource');
+        const clockFaceImageDiv = document.getElementById('clockFaceImage');
+
+        // --- Settings Variables ---
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModalOverlay = document.getElementById('settingsModalOverlay');
+        const settingsModalContent = settingsModalOverlay.querySelector('.settings-modal-content');
+        const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+        const applySettingsBtn = document.getElementById('applySettingsBtn');
+        const resetSettingsBtn = document.getElementById('resetSettingsBtn'); // 新增還原按鈕
+
+        const quoteIntervalInput = document.getElementById('quoteInterval');
+        const clockOuterColorInput = document.getElementById('clockOuterColor');
+        const numberFontFamilySelect = document.getElementById('numberFontFamily');
+        const numberFontSizeInput = document.getElementById('numberFontSize');
+        const clockFaceImageSelect = document.getElementById('clockFaceImageSelect');
+        const hourHandThicknessInput = document.getElementById('hourHandThickness');
+        const minuteHandThicknessInput = document.getElementById('minuteHandThickness');
+        const secondHandThicknessInput = document.getElementById('secondHandThickness');
+
+        let quoteIntervalTimer; // To store the interval ID for quotes
+
+        // 鐘面背景圖案 URL 映射 (使用您提供的 Imgur 連結)
+        // 注意：Imgur 的相簿連結通常不能直接作為圖片 URL 使用，我已將其轉換為直接圖片連結的常見格式。
+        // 如果圖片無法顯示，請確認這些連結是否為直接圖片連結（通常以 .jpg, .png, .gif 結尾）。
+        const clockFaceImages = {
+            'xiaocaodi': 'https://i.imgur.com/4IglaiY.jpeg',
+            'xiaoyuanwaimao': 'https://i.imgur.com/BTst6oG.jpeg',
+            'biyeshijianlang': 'https://i.imgur.com/oVVvmib.jpeg',
+            'zhihuiquan': 'https://i.imgur.com/0BaoVsy.jpeg'
+        };
+
+
+        // 時間語錄陣列 (已擴充至100句)
+        const timeQuotes = [
+            "時間從不等人，把握當下，活在當下。",
+            "時間是最好的老師，也是最嚴厲的考官。",
+            "過去已逝，未來未至，唯有現在是真實的禮物。",
+            "每一秒都是新的開始，每一刻都是新的機會。",
+            "時間如流水，一去不復返，珍惜流逝的每一刻。",
+            "用時間去創造，而不是用時間去等待。",
+            "時間是治癒一切的良藥，也是檢驗真理的標準。",
+            "不要為過去的時間哭泣，為未來的時間努力。",
+            "時間並非金錢，它比金錢更珍貴，因為它無法被儲存或複製。",
+            "鐘聲響起，提醒我們時間的流逝，也提醒我們生命的寶貴。",
+            "歲月不居，時節如流，珍惜光陰。",
+            "時間是公平的，它給予每個人相同的24小時。",
+            "把握今天，因為昨天已是歷史，明天仍是未知。",
+            "即使是最漫長的旅程，也始於腳下的一小步。",
+            "時間會證明一切，也會帶走一切。",
+            "每個清晨都是時間給予的新畫布。",
+            "讓時間成為你的盟友，而非敵人。",
+            "時間的價值在於如何利用它。",
+            "匆匆歲月，留下的是回憶，帶走的是光陰。",
+            "活出每一刻的精彩，時間便不再虛度。",
+            "時光荏苒，珍惜每分每秒。",
+            "時間是一條永不停息的河流。",
+            "讓時間見證你的成長和努力。",
+            "時間是衡量生命長度的唯一標準。",
+            "生命的長度有限，時間的價值無限。",
+            "每一刻都值得被銘記。",
+            "用時間去沉澱，用時間去感悟。",
+            "時間是考驗真摯的試金石。",
+            "不要讓時間從指縫溜走。",
+            "時間是無聲的記錄者。",
+            "歲月靜好，是時間的饋贈。",
+            "時間會給你所有答案。",
+            "在時間的洪流中，保持清醒。",
+            "時間是最好的濾鏡，篩選出真正重要的。",
+            "時間的力量，超乎想像。",
+            "讓時間證明你的選擇。",
+            "與時間賽跑，與自己和解。",
+            "時間是生命最寶貴的資產。",
+            "珍惜當下，時間便是永恆。",
+            "時間流轉，初心不變。",
+            "用時間書寫你的故事。",
+            "時間是夢想的催化劑。",
+            "讓時間成為你變好的證明。",
+            "時間的印記，深刻而溫暖。",
+            "用時間去愛，去生活，去感受。",
+            "時間是智慧的積累。",
+            "每一個今天，都是明天的序章。",
+            "時間的積累，成就非凡。",
+            "不負時光，不負自己。",
+            "時間是最好的篩子，留下精品。",
+            "歲月如歌，時間是旋律。",
+            "時間是成功的伙伴。",
+            "讓時間賦予生命意義。",
+            "時間是希望的耕耘者。",
+            "不要虛度光陰，每一刻都值得。",
+            "時間是奇蹟的創造者。",
+            "時間教會我們成長和放下。",
+            "活在當下，時間會善待你。",
+            "時間是最珍貴的寶藏，取之不盡。",
+            "讓時間帶走憂愁，留下美好。",
+            "時間是經驗的累積，智慧的沉澱。",
+            "時間不會倒流，但記憶永存。",
+            "善用時間，成就非凡人生。",
+            "時間是檢驗真情的標準。",
+            "歲月如梭，把握每一次機會。",
+            "時間是生命的畫筆，繪製精彩。",
+            "時間是一場旅行，享受過程。",
+            "讓時間為你的努力加冕。",
+            "時間是無形的財富。",
+            "用心感受時間的流動。",
+            "時間是成長的階梯。",
+            "不要讓時間成為你的枷鎖。",
+            "時間是靜默的觀察者。",
+            "用時間去修煉內心。",
+            "時間是最好的證明者。",
+            "時間會沖刷掉一切不愉快。",
+            "時間是信念的見證。",
+            "時間是行動的號角。",
+            "讓時間見證你的堅韌不拔。",
+            "時間是學習的沃土。",
+            "時間是希望的火種。",
+            "時間是夢想的溫床。",
+            "時間是奮鬥的動力。",
+            "時間是改變的開始。",
+            "時間是最好的老師。",
+            "時間是生命的饋贈。",
+            "時間是永恆的瞬間。",
+            "時間是美好的回憶。",
+            "時間是真理的考驗。",
+            "時間是成長的催化劑。",
+            "時間是成功的基石。",
+            "時間是幸福的源泉。",
+            "時間是無價之寶。",
+            "時間是生命的藝術。",
+            "時間是智慧的結晶。",
+            "時間是夢想的搖籃。",
+            "時間是愛的滋養。",
+            "時間是和平的使者。",
+            "時間是永恆的愛。",
+            "時間是生命的真諦。",
+            "時間是無盡的可能。",
+            "時間是宇宙的詩篇。"
+        ];
+
+        // Function to dynamically create hour and minute marks
+        function createClockMarks() {
+            // Clear existing marks
+            hourMarksContainer.innerHTML = '';
+            minuteMarksContainer.innerHTML = '';
+
+            // Create 12 hour marks
+            for (let i = 0; i < 12; i++) {
+                const hourMarkContainer = document.createElement('div');
+                hourMarkContainer.className = 'hour-mark-container';
+                hourMarkContainer.style.transform = `rotate(${i * 30}deg)`; // Rotate the container
+                const hourMarkLine = document.createElement('div');
+                hourMarkLine.className = 'hour-mark-line';
+                hourMarkContainer.appendChild(hourMarkLine);
+                hourMarksContainer.appendChild(hourMarkContainer);
+            }
+
+            // Create 60 minute marks
+            for (let i = 0; i < 60; i++) {
+                const minuteMarkContainer = document.createElement('div');
+                minuteMarkContainer.className = 'minute-mark-container';
+                minuteMarkContainer.style.transform = `rotate(${i * 6}deg)`; // Rotate the container
+                const minuteMarkLine = document.createElement('div');
+                minuteMarkLine.className = 'minute-mark-line';
+                minuteMarkContainer.appendChild(minuteMarkLine);
+                minuteMarksContainer.appendChild(minuteMarkContainer);
+            }
+        }
+
+
+        function updateClock() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+            const milliseconds = now.getMilliseconds(); // Get milliseconds for smooth movement
+
+            // Analog Clock Hand Rotation
+            // Hours: 360 degrees / 12 hours = 30 degrees per hour
+            // Add (minutes / 60) * 30 to account for minute movement
+            const hourDeg = (hours % 12) * 30 + (minutes / 60) * 30 + (seconds / 3600) * 30; // Added seconds for smoother hour hand
+            hourHand.style.transform = `translate(-50%, 0%) rotate(${hourDeg}deg)`;
+
+            // Minutes: 360 degrees / 60 minutes = 6 degrees per minute
+            // Add (seconds / 60) * 6 to account for second movement
+            const minuteDeg = minutes * 6 + (seconds / 60) * 6;
+            minuteHand.style.transform = `translate(-50%, 0%) rotate(${minuteDeg}deg)`;
+
+            // Seconds: 360 degrees / 60 seconds = 6 degrees per second
+            // Use milliseconds for smooth movement
+            const secondDeg = (seconds + milliseconds / 1000) * 6;
+            secondHand.style.transform = `translate(-50%, 0%) rotate(${secondDeg}deg)`;
+
+            // Digital Clock and Calendar
+            const formattedTime = now.toLocaleTimeString('zh-Hant', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            const formattedDate = now.toLocaleDateString('zh-Hant', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+
+            digitalTime.textContent = formattedTime;
+            digitalDate.textContent = formattedDate;
+        }
+
+        // Function to display a random quote from the predefined list
+        function displayRandomPredefinedQuote() {
+            const randomIndex = Math.floor(Math.random() * timeQuotes.length);
+            timeQuoteDisplay.textContent = timeQuotes[randomIndex];
+        }
+
+        // Function to switch quote with fade effect
+        function switchQuoteWithFade() {
+            timeQuoteDisplay.classList.add('fade-out'); // Add fade-out class
+
+            // After fade-out transition completes (or slightly before), change content
+            setTimeout(() => {
+                displayRandomPredefinedQuote(); // Change quote content
+                timeQuoteDisplay.classList.remove('fade-out'); // Remove fade-out to trigger fade-in
+            }, 800); // This delay should match the CSS transition duration (0.8s)
+        }
+
+        // --- Settings Modal Functions ---
+        function openSettingsModal() {
+            // Populate current values into the modal inputs
+            quoteIntervalInput.value = parseInt(localStorage.getItem('quoteInterval') || '30'); // Updated default
+            clockOuterColorInput.value = localStorage.getItem('clockOuterColor') || '#D2B48C';
+            numberFontFamilySelect.value = localStorage.getItem('numberFontFamily') || 'Inter, sans-serif';
+            numberFontSizeInput.value = parseInt(localStorage.getItem('numberFontSize') || '35'); // Updated default
+            clockFaceImageSelect.value = localStorage.getItem('clockFaceImage') || ''; // Load saved image option
+            hourHandThicknessInput.value = parseInt(localStorage.getItem('hourHandThickness') || '7'); // Updated default
+            minuteHandThicknessInput.value = parseInt(localStorage.getItem('minuteHandThickness') || '5'); // Updated default
+            secondHandThicknessInput.value = parseInt(localStorage.getItem('secondHandThickness') || '3'); // Updated default
+
+            settingsModalOverlay.classList.add('active');
+        }
+
+        function closeSettingsModal() {
+            settingsModalOverlay.classList.remove('active');
+        }
+
+        function applySettings() {
+            const newQuoteInterval = parseInt(quoteIntervalInput.value);
+            const newClockOuterColor = clockOuterColorInput.value;
+            const newNumberFontFamily = numberFontFamilySelect.value;
+            const newNumberFontSize = parseInt(numberFontSizeInput.value);
+            const newClockFaceImageKey = clockFaceImageSelect.value; // Get selected image key
+            const newHourHandThickness = parseInt(hourHandThicknessInput.value);
+            const newMinuteHandThickness = parseInt(minuteHandThicknessInput.value);
+            const newSecondHandThickness = parseInt(secondHandThicknessInput.value);
+
+            // Validate inputs
+            if (isNaN(newQuoteInterval) || newQuoteInterval < 10) {
+                alert('時間語錄轉換間隔必須是至少10秒的數字！');
+                return;
+            }
+            if (isNaN(newNumberFontSize) || newNumberFontSize < 10 || newNumberFontSize > 50) {
+                alert('鐘面數字字體大小必須在10到50之間！');
+                return;
+            }
+            if (isNaN(newHourHandThickness) || newHourHandThickness < 1 || newHourHandThickness > 10 ||
+                isNaN(newMinuteHandThickness) || newMinuteHandThickness < 1 || newMinuteHandThickness > 10 ||
+                isNaN(newSecondHandThickness) || newSecondHandThickness < 1 || newSecondHandThickness > 10) {
+                alert('指針粗幼度必須在1到10之間！');
+                return;
+            }
+
+            // Apply quote interval setting
+            clearInterval(quoteIntervalTimer); // Clear existing interval
+            quoteIntervalTimer = setInterval(switchQuoteWithFade, newQuoteInterval * 1000);
+            localStorage.setItem('quoteInterval', newQuoteInterval);
+
+            // Apply clock outer frame color
+            document.documentElement.style.setProperty('--clock-outer-color', newClockOuterColor);
+            localStorage.setItem('clockOuterColor', newClockOuterColor);
+
+            // Apply number font and font size
+            document.documentElement.style.setProperty('--number-font-family', newNumberFontFamily);
+            document.documentElement.style.setProperty('--number-font-size', `${newNumberFontSize}px`);
+            localStorage.setItem('numberFontFamily', newNumberFontFamily);
+            localStorage.setItem('numberFontSize', newNumberFontSize);
+
+            // Apply clock face background image
+            const imageUrl = clockFaceImages[newClockFaceImageKey] || ''; // Get URL based on key
+            clockFaceImageDiv.style.backgroundImage = imageUrl ? `url('${imageUrl}')` : 'none';
+            localStorage.setItem('clockFaceImage', newClockFaceImageKey); // Store the key, not the URL
+
+            // Apply hand thickness
+            document.documentElement.style.setProperty('--hour-hand-width', `${newHourHandThickness}px`);
+            document.documentElement.style.setProperty('--minute-hand-width', `${newMinuteHandThickness}px`);
+            document.documentElement.style.setProperty('--second-hand-width', `${newSecondHandThickness}px`);
+            localStorage.setItem('hourHandThickness', newHourHandThickness);
+            localStorage.setItem('minuteHandThickness', newMinuteHandThickness);
+            localStorage.setItem('secondHandThickness', newSecondHandThickness);
+
+            closeSettingsModal();
+        }
+
+        // Function to load settings from localStorage on page load
+        function loadSettings() {
+            const savedQuoteInterval = parseInt(localStorage.getItem('quoteInterval') || '30'); // Updated default
+            const savedClockOuterColor = localStorage.getItem('clockOuterColor') || '#D2B48C';
+            const savedNumberFontFamily = localStorage.getItem('numberFontFamily') || 'Inter, sans-serif';
+            const savedNumberFontSize = parseInt(localStorage.getItem('numberFontSize') || '35'); // Updated default
+            const savedClockFaceImageKey = localStorage.getItem('clockFaceImage') || '';
+            const savedHourHandThickness = parseInt(localStorage.getItem('hourHandThickness') || '7'); // Updated default
+            const savedMinuteHandThickness = parseInt(localStorage.getItem('minuteHandThickness') || '5'); // Updated default
+            const savedSecondHandThickness = parseInt(localStorage.getItem('secondHandThickness') || '3'); // Updated default
+
+            // Apply initial settings
+            document.documentElement.style.setProperty('--clock-outer-color', savedClockOuterColor);
+            document.documentElement.style.setProperty('--number-font-family', savedNumberFontFamily);
+            document.documentElement.style.setProperty('--number-font-size', `${savedNumberFontSize}px`);
+            
+            const imageUrl = clockFaceImages[savedClockFaceImageKey] || '';
+            clockFaceImageDiv.style.backgroundImage = imageUrl ? `url('${imageUrl}')` : 'none';
+
+            document.documentElement.style.setProperty('--hour-hand-width', `${savedHourHandThickness}px`);
+            document.documentElement.style.setProperty('--minute-hand-width', `${savedMinuteHandThickness}px`);
+            document.documentElement.style.setProperty('--second-hand-width', `${savedSecondHandThickness}px`);
+
+            // Start quote interval with loaded setting
+            quoteIntervalTimer = setInterval(switchQuoteWithFade, savedQuoteInterval * 1000);
+        }
+
+        // Function to reset all settings to their default values
+        function resetSettings() {
+            // Clear localStorage for all settings
+            localStorage.removeItem('quoteInterval');
+            localStorage.removeItem('clockOuterColor');
+            localStorage.removeItem('numberFontFamily');
+            localStorage.removeItem('numberFontSize');
+            localStorage.removeItem('clockFaceImage');
+            localStorage.removeItem('hourHandThickness');
+            localStorage.removeItem('minuteHandThickness');
+            localStorage.removeItem('secondHandThickness');
+
+            // Set input values back to their defaults (matching HTML defaults)
+            quoteIntervalInput.value = 30; // Updated default
+            clockOuterColorInput.value = '#D2B48C';
+            numberFontFamilySelect.value = 'Inter, sans-serif';
+            numberFontSizeInput.value = 35; // Updated default
+            clockFaceImageSelect.value = ''; // No image
+            hourHandThicknessInput.value = 7; // Updated default
+            minuteHandThicknessInput.value = 5; // Updated default
+            secondHandThicknessInput.value = 3; // Updated default
+
+            // Apply these default settings immediately
+            applySettings();
+            closeSettingsModal(); // Close modal after reset
+        }
+
+        // --- Initial Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            createClockMarks(); // Create marks on load
+            setInterval(updateClock, 1000 / 60); // Update more frequently for smooth second hand
+            updateClock(); // Initial clock display
+
+            loadSettings(); // Load and apply settings from local storage
+            displayRandomPredefinedQuote(); // Display initial quote immediately after loading settings
+
+            // Event Listeners for Settings Modal
+            settingsBtn.addEventListener('click', openSettingsModal);
+            cancelSettingsBtn.addEventListener('click', closeSettingsModal);
+            applySettingsBtn.addEventListener('click', applySettings);
+            resetSettingsBtn.addEventListener('click', resetSettings); // Add event listener for reset button
+
+            // Close modal when clicking outside content
+            settingsModalOverlay.addEventListener('click', (e) => {
+                if (e.target === settingsModalOverlay) {
+                    closeSettingsModal();
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
