@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數字卡牌排列遊戲</title>
+    <!-- 使用 Tailwind CSS CDN 載入樣式 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 噴花效果函式庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        /* 遊戲區域的樣式，用於放置卡牌 */
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            min-height: 10rem;
+            border: 2px dashed #9ca3af;
+            border-radius: 1rem;
+            padding: 1.5rem 2rem;
+            align-items: center;
+        }
+        /* 單張卡牌的樣式 */
+        .card {
+            background-color: #fff;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.75rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            cursor: grab;
+            transition: transform 0.3s, box-shadow 0.2s, background-color 0.3s;
+            touch-action: none;
+            user-select: none;
+            transform-style: preserve-3d;
+        }
+        .card:active {
+            cursor: grabbing;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .card-source-area .card {
+            cursor: pointer;
+        }
+        .dragged {
+            opacity: 0.5;
+        }
+        /* 記憶力模式下卡牌翻轉樣式 */
+        .card.flipped {
+            background-color: #6b7280; /* gray-500 */
+            color: #f3f4f6; /* gray-100 */
+            font-size: 5rem;
+            transform: scale(1.05);
+        }
+        /* 卡牌進入動畫 */
+        @keyframes pop-in {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .pop-animation {
+            animation: pop-in 0.5s ease-out;
+        }
+        /* 炸彈搖晃動畫 */
+        @keyframes bomb-shake {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            50% { transform: rotate(-15deg); }
+            75% { transform: rotate(15deg); }
+            100% { transform: rotate(0deg); }
+        }
+        .bomb-shake {
+            animation: bomb-shake 0.2s ease-in-out infinite alternate;
+        }
+        /* 炸彈最終爆炸動畫 */
+        @keyframes bomb-final-explode {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        .bomb-final-explode {
+            animation: bomb-final-explode 0.5s ease-out forwards;
+        }
+        
+        /* 答錯時的畫面搖晃動畫 */
+        @keyframes screen-shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-8px); }
+            20%, 40%, 60%, 80% { transform: translateX(8px); }
+        }
+        .shake-animation {
+            animation: screen-shake 0.4s ease-in-out;
+        }
+        
+        /* 提示圖案動畫 */
+        @keyframes peek-and-shake {
+            0% { transform: translateY(-100%) rotate(0deg); opacity: 0; }
+            50% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            60% { transform: translateY(0) rotate(15deg); }
+            70% { transform: translateY(0) rotate(-15deg); }
+            80% { transform: translateY(0) rotate(15deg); }
+            90% { transform: translateY(0) rotate(-15deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+        .peek-animation {
+            animation: peek-and-shake 0.8s ease-in-out;
+        }
+
+        @keyframes vibrate {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        .vibrate-animation {
+            animation: vibrate 0.5s linear infinite;
+        }
+
+
+        /* 彈出視窗（Modal）樣式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+            max-width: 90%;
+            width: 500px;
+            animation: pop-in 0.3s ease-out;
+        }
+        /* 自定義音效開關樣式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        /* 教學模式控制面板 */
+        .teacher-panel-card {
+            width: 3rem;
+            height: 4rem;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto w-full">
+        <div class="bg-white rounded-3xl shadow-lg p-8 space-y-8">
+            <div class="flex justify-center items-center relative">
+                <h1 id="game-title" class="text-5xl font-bold text-center text-gray-800">數字卡牌排列遊戲 🃏</h1>
+                <button id="settings-button" class="absolute right-0 px-6 py-4 bg-gray-200 text-gray-600 rounded-full font-bold shadow-md hover:bg-gray-300 transition duration-300 text-2xl">
+                    ⚙️
+                </button>
+            </div>
+            
+             <!-- 混合大激鬥模式計分板 -->
+            <div id="battle-stats" class="hidden text-center space-y-2">
+                <div class="flex justify-between items-center space-x-4">
+                    <p class="text-gray-700 font-bold text-xl w-1/3 text-left">
+                        <span id="progress-text">進度</span>: <span id="progress-display" class="text-blue-500">1/10</span>
+                    </p>
+                    <p id="combo-display" class="hidden text-orange-500 font-bold text-2xl w-1/3 text-center"></p>
+                    <p class="text-gray-700 font-bold text-xl w-1/3 text-right">
+                        <span id="score-text">總分</span>: <span id="score-display" class="text-green-500">0</span>
+                    </p>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700">
+                    <div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <p id="game-objective" class="text-center text-gray-600 font-bold text-3xl">
+                💡 拖曳卡牌來這裡重新排列，組成一個最大的五位數！
+            </p>
+
+            <!-- 計時器 -->
+            <div id="timer-container" class="flex justify-center items-center text-center space-x-2">
+                <span id="bomb-icon" class="text-4xl">💣</span>
+                <p class="text-gray-700 font-bold text-2xl">
+                    <span id="timer-text">倒數計時</span>: <span id="timer-display" class="text-red-500">60</span> <span id="second-text">秒</span>
+                </p>
+            </div>
+
+            <!-- 提示區 -->
+            <div id="message-container" class="bg-blue-100 border border-blue-400 text-blue-700 px-8 py-6 rounded-xl relative hidden text-center" role="alert">
+                 <div class="flex justify-center items-center space-x-4">
+                    <span id="message-icon" class="text-5xl hidden"></span>
+                    <span id="message-text" class="block text-2xl font-bold"></span>
+                </div>
+            </div>
+
+            <!-- 卡牌區域 (動態內容) -->
+            <div id="game-area">
+                <!-- 遊戲內容將由 JavaScript 動態生成 -->
+            </div>
+
+            <!-- 教學模式顯示答案按鈕 -->
+            <div id="teacher-show-answer-container" class="hidden justify-center space-x-4 mt-6">
+                <button id="show-answer-btn" class="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold shadow-md hover:bg-indigo-700 transition text-lg" disabled>顯示答案</button>
+            </div>
+
+            <!-- 混合大激鬥結果畫面 -->
+            <div id="battle-results-container" class="hidden w-full">
+                <h2 id="battle-summary-title" class="text-3xl font-bold text-center mb-4">挑戰結果總結</h2>
+                <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+                    <table class="min-w-full bg-white">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th id="header-round" class="p-3 text-sm font-bold text-gray-600 uppercase tracking-wider text-center">題號</th>
+                                <th id="header-objective" class="p-3 text-sm font-bold text-gray-600 uppercase tracking-wider text-left">題目要求</th>
+                                <th id="header-your-answer" class="p-3 text-sm font-bold text-gray-600 uppercase tracking-wider text-left">你的答案</th>
+                                <th id="header-correct-answer" class="p-3 text-sm font-bold text-gray-600 uppercase tracking-wider text-left">正確答案</th>
+                                <th id="header-result" class="p-3 text-sm font-bold text-gray-600 uppercase tracking-wider text-center">結果</th>
+                                <th id="header-time" class="p-3 text-sm font-bold text-gray-600 uppercase tracking-wider text-right">時間 (秒)</th>
+                                <th id="header-score" class="p-3 text-sm font-bold text-gray-600 uppercase tracking-wider text-right">得分</th>
+                            </tr>
+                        </thead>
+                        <tbody id="battle-results-body" class="divide-y divide-gray-200">
+                            <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div id="controls" class="flex justify-center space-x-4">
+                 <button id="start-battle-button" class="hidden px-8 py-4 bg-green-600 text-white rounded-full font-bold shadow-md hover:bg-green-700 transition duration-300 text-lg">
+                    <span id="start-battle-text">開始挑戰</span> 🔥
+                </button>
+                <button id="check-button" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold shadow-md hover:bg-blue-700 transition duration-300 text-lg disabled:bg-gray-300">
+                    <span id="check-text">檢查答案</span> ✅
+                </button>
+                <button id="reset-button" class="px-8 py-4 bg-gray-400 text-white rounded-full font-bold shadow-md hover:bg-gray-500 transition duration-300 text-lg">
+                    <span id="reset-text">重新開始</span> 🔄
+                </button>
+            </div>
+            
+            <!-- 教學模式控制面板 -->
+            <div id="teacher-controls" class="hidden space-y-6 bg-gray-50 p-6 rounded-2xl border-2 border-gray-200">
+                <h2 id="teacher-panel-title" class="text-2xl font-bold text-center text-gray-700">教師控制面板</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="space-y-3 md:col-span-2">
+                        <label id="teacher-card-setup-label" class="font-bold text-gray-600">1. 點擊數字以新增卡牌</label>
+                        <div id="manual-cards-display" class="card-container bg-white min-h-[6rem]"></div>
+                        <div class="flex flex-wrap justify-center gap-2" id="digit-buttons">
+                            <!-- Digit buttons 0-9 will be inserted here by JS -->
+                        </div>
+                        <button id="clear-manual-cards" class="w-full px-4 py-2 bg-red-500 text-white rounded-lg font-bold shadow-sm hover:bg-red-600 transition">清除卡牌</button>
+                    </div>
+                    <div class="space-y-4 md:col-span-1">
+                        <div>
+                            <label for="teacher-mode-toggle" id="teacher-gamemode-label" class="font-bold text-gray-600">2. 玩法模式</label>
+                            <div class="mt-2 flex rounded-lg shadow-sm">
+                                <button id="teacher-mode1-btn" class="w-full px-4 py-2 bg-blue-600 text-white rounded-l-lg font-bold">固定卡牌</button>
+                                <button id="teacher-mode2-btn" class="w-full px-4 py-2 bg-white text-gray-700 rounded-r-lg font-bold">最佳組合</button>
+                            </div>
+                        </div>
+                         <div id="teacher-digit-count-container" class="hidden">
+                            <label for="teacher-digit-count" id="teacher-digit-count-label" class="font-bold text-gray-600">3. 目標數字位數</label>
+                            <select id="teacher-digit-count" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg p-3"></select>
+                        </div>
+                         <div>
+                            <label id="teacher-objective-label" class="font-bold text-gray-600">3. 選擇目標類型</label>
+                            <select id="teacher-objective-type" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg p-3"></select>
+                        </div>
+                        <div class="pt-6">
+                             <button id="generate-question-btn" class="w-full px-8 py-4 bg-green-600 text-white rounded-lg font-bold shadow-md hover:bg-green-700 transition text-xl">生成題目</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 彈出視窗（Modal） -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal-content flex flex-col items-center space-y-6">
+            <h2 id="settings-title" class="text-4xl font-bold text-gray-800">遊戲設定 ⚙️</h2>
+            
+            <!-- 語言選擇 -->
+            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full justify-between">
+                <label id="language-label" for="language-select" class="font-bold text-gray-700 text-xl">網頁語言: 🌐</label>
+                <select id="language-select" class="rounded-full border-gray-300 p-3 shadow-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+                    <option value="zh-TW" selected>中文繁體</option>
+                    <option value="zh-CN">中文簡體</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+
+            <!-- 模式選擇 -->
+            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full justify-between">
+                <label id="mode-label" for="mode-select" class="font-bold text-gray-700 text-xl">遊戲模式: 🎮</label>
+                <select id="mode-select" class="rounded-full border-gray-300 p-3 shadow-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg">
+                    <option value="mode4">教學模式</option>
+                    <option value="mode1">固定卡牌</option>
+                    <option value="mode2">最佳組合</option>
+                    <option value="mode3">混合大激鬥</option>
+                </select>
+            </div>
+
+            <!-- 數字數量設定 -->
+            <div id="number-settings" class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full justify-between">
+                <label id="number-count-label" for="card-count-select" class="font-bold text-gray-700 text-xl">卡牌數量: 🔢</label>
+                <select id="card-count-select" class="rounded-full border-gray-300 p-2 shadow-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-base">
+                    <!-- 選項將由 JavaScript 動態生成 -->
+                </select>
+            </div>
+
+            <!-- 時間設定 -->
+            <div id="time-settings" class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full justify-between">
+                <label id="time-label" for="time-select" class="font-bold text-gray-700 text-xl">遊戲時長: ⏱️</label>
+                <select id="time-select" class="rounded-full border-gray-300 p-2 shadow-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-base">
+                    <option value="10">10 秒</option>
+                    <option value="30">30 秒</option>
+                    <option value="60" selected>1 分鐘</option>
+                    <option value="90">1.5 分鐘</option>
+                    <option value="120">2 分鐘</option>
+                </select>
+            </div>
+
+            <!-- 音效設定 -->
+            <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full justify-between">
+                <label id="sound-label" for="sound-toggle" class="font-bold text-gray-700 text-xl">遊戲音效: 🔊</label>
+                <label class="switch">
+                    <input type="checkbox" id="sound-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <button id="close-settings-button" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold shadow-md hover:bg-blue-700 transition duration-300 text-lg mt-6">
+                <span id="save-text">儲存並關閉</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainContainer = document.querySelector('.max-w-6xl');
+            const modeSelect = document.getElementById('mode-select');
+            const cardCountSelect = document.getElementById('card-count-select');
+            const timeSelect = document.getElementById('time-select');
+            const gameArea = document.getElementById('game-area');
+            const gameObjective = document.getElementById('game-objective');
+            const checkButton = document.getElementById('check-button');
+            const resetButton = document.getElementById('reset-button');
+            const startBattleButton = document.getElementById('start-battle-button');
+            const messageContainer = document.getElementById('message-container');
+            const messageText = document.getElementById('message-text');
+            const messageIcon = document.getElementById('message-icon');
+            const timerDisplay = document.getElementById('timer-display');
+            const bombIcon = document.getElementById('bomb-icon');
+            const timerContainer = document.getElementById('timer-container');
+            const battleStats = document.getElementById('battle-stats');
+            const progressDisplay = document.getElementById('progress-display');
+            const progressBar = document.getElementById('progress-bar');
+            const scoreDisplay = document.getElementById('score-display');
+            const comboDisplay = document.getElementById('combo-display');
+            const battleResultsContainer = document.getElementById('battle-results-container');
+            const battleResultsBody = document.getElementById('battle-results-body');
+
+
+            // Modal related elements
+            const settingsButton = document.getElementById('settings-button');
+            const settingsModal = document.getElementById('settings-modal');
+            const closeSettingsButton = document.getElementById('close-settings-button');
+            const languageSelect = document.getElementById('language-select');
+            const soundToggle = document.getElementById('sound-toggle');
+            const numberSettings = document.getElementById('number-settings');
+            const timeSettings = document.getElementById('time-settings');
+            const numberCountLabel = document.getElementById('number-count-label');
+
+            // Teacher controls
+            const teacherControls = document.getElementById('teacher-controls');
+            const digitButtonsContainer = document.getElementById('digit-buttons');
+            const manualCardsDisplay = document.getElementById('manual-cards-display');
+            const clearManualCardsBtn = document.getElementById('clear-manual-cards');
+            const teacherObjectiveType = document.getElementById('teacher-objective-type');
+            const generateQuestionBtn = document.getElementById('generate-question-btn');
+            const showAnswerBtn = document.getElementById('show-answer-btn');
+            const teacherShowAnswerContainer = document.getElementById('teacher-show-answer-container');
+            const teacherMode1Btn = document.getElementById('teacher-mode1-btn');
+            const teacherMode2Btn = document.getElementById('teacher-mode2-btn');
+            const teacherDigitCountContainer = document.getElementById('teacher-digit-count-container');
+            const teacherDigitCountSelect = document.getElementById('teacher-digit-count');
+
+
+            let CARD_COUNT = 5;
+            let CARD_SOURCE_COUNT = 7;
+            const cardColors = ['#fde68a', '#d9f991', '#a7f3d0', '#bfdbfe', '#fbcfe8', '#e9d5ff', '#a5f3fc', '#fecaca', '#fef08a', '#d1d5db'];
+            
+            let currentMode = 'mode4'; // *** MODIFIED: Default to teaching mode ***
+            let cards = [];
+            let correctNumber = '';
+            let currentObjective = '';
+            let timerInterval = null;
+            let initialTime = 60;
+            let timerInSeconds = 60;
+            let wrongAttempts = 0;
+            let currentLanguage = 'zh-TW';
+
+            // 混合大激鬥模式變數
+            let isBattleModeActive = false;
+            let currentRound = 0;
+            const TOTAL_ROUNDS = 10;
+            let battleTotalScore = 0;
+            let battleResults = [];
+            let currentSpecialRoundType = null;
+            let comboCounter = 0;
+            
+            // 教學模式變數
+            let manualCards = [];
+            let teacherMode = 'mode1';
+
+            // 音效相關變數
+            let soundEnabled = false;
+            let audioCtx;
+            let soundClick, soundCorrect, soundIncorrect, soundDrop, soundSwoosh, soundTick;
+            let soundCombo = [];
+            
+            // 翻譯字典
+            const translations = {
+                'zh-TW': {
+                    title: '數字卡牌排列遊戲 🃏',
+                    title_mode1: '數字卡牌排列練習(固定卡牌)',
+                    title_mode2: '數字卡牌排列練習(最佳組合)',
+                    title_mode3: '數字卡牌排列大激鬥',
+                    teaching_title: '數字卡牌排列教學',
+                    objective_prefix: '💡 拖曳卡牌來這裡重新排列，',
+                    objective_largest: '組成一個<span class="font-bold text-rose-600">最大的${count}位數</span>',
+                    objective_smallest: '組成一個<span class="font-bold text-rose-600">最小的${count}位數</span>',
+                    objective_largest_odd: '組成一個<span class="font-bold text-rose-600">最大的${count}位奇數</span>',
+                    objective_largest_even: '組成一個<span class="font-bold text-rose-600">最大的${count}位偶數</span>',
+                    objective_smallest_odd: '組成一個<span class="font-bold text-rose-600">最小的${count}位奇數</span>',
+                    objective_smallest_even: '組成一個<span class="font-bold text-rose-600">最小的${count}位偶數</span>',
+                    objective_target: '組成一個最接近 <span class="font-bold text-indigo-600">${target}</span> 的數字',
+                    objective_mode2_prefix: '💡 從下方${sourceCount}張卡牌中選出${count}張，並在上方',
+                    objective_mode2_suffix: '！',
+                    objective_mode3_welcome: '🔥 準備好迎接10道隨機題目的<span class="font-bold text-purple-600">混合大激鬥</span>挑戰了嗎？',
+                    objective_mode3_description: '你將連續挑戰10道題目。<br>答對時，剩餘時間越多，分數越高！<br>挑戰中可能會隨機出現帶來驚喜獎勵或挑戰的「特殊關卡」！',
+                    objective_mode4_welcome: '📚 歡迎來到教學模式！請使用下方的控制面板來設定題目。',
+                    countdown: '倒數計時',
+                    seconds: '秒',
+                    check: '檢查答案',
+                    reset: '重新開始',
+                    start_battle: '開始挑戰',
+                    progress_text: '進度',
+                    score_text: '總分',
+                    combo_text: '連擊',
+                    battle_end_message: '🎉 挑戰結束！你的最終總分是：<span class="font-bold text-green-600">${score}</span> 分！',
+                    battle_summary_title: '挑戰結果總結',
+                    header_round: '題號',
+                    header_objective: '題目要求',
+                    header_your_answer: '你的答案',
+                    header_correct_answer: '正確答案',
+                    header_result: '結果',
+                    header_time: '時間 (秒)',
+                    header_score: '得分',
+                    special_lightning: '閃電快答關',
+                    special_memory: '記憶力大考驗',
+                    special_bonus: '獎勵關卡',
+                    special_target: '數字射靶關',
+                    settings_title: '遊戲設定 ⚙️',
+                    language_label: '網頁語言: 🌐',
+                    mode_label: '遊戲模式: 🎮',
+                    fixed_mode: '固定卡牌',
+                    optimal_mode: '最佳組合',
+                    battle_mode: '混合大激鬥',
+                    teaching_mode: '教學模式',
+                    number_label_fixed: '卡牌數量: 🔢',
+                    number_label_optimal: '多位數數量: 🔢',
+                    number_label_max: '最多卡牌數量: 🔢',
+                    time_label: '遊戲時長: ⏱️',
+                    save: '儲存並關閉',
+                    sound_label: '遊戲音效: 🔊',
+                    teacher_panel_title: '教師控制面板',
+                    teacher_card_setup_label: '1. 點擊數字以新增卡牌',
+                    teacher_clear_cards: '清除卡牌',
+                    teacher_gamemode_label: '2. 玩法模式',
+                    teacher_digit_count_label: '3. 目標數字位數',
+                    teacher_objective_label: '3. 選擇目標類型',
+                    teacher_generate_question: '生成題目',
+                    teacher_show_answer: '顯示答案',
+                    teacher_error_card_count: '卡牌數量必須介於${min}到${max}張之間！',
+                    teacher_error_digit_count: '目標數字位數必須小於或等於可選卡牌數量！',
+                    message_not_enough_cards: '請先將所有${count}張卡牌都拖曳到框框內！',
+                    message_correct: '太棒了！你的答案是正確的！',
+                    message_correct_score: '太棒了！答案正確！<span class="font-bold text-green-600">+${score}</span> 分！',
+                    message_time_up: '時間到了！答案是：${answer}',
+                    message_time_up_positive: '時間到了! 下次要加油啊!',
+                    message_incorrect_attempts: '不正確。請繼續嘗試！',
+                    message_incorrect_positive: '答錯了! 下次要加油啊!',
+                    message_incorrect_limit: '連續答錯3次！正確答案是：${answer}',
+                    message_no_parity_number: '這組數字無法組成符合要求的數字。',
+                    drag_prompt_mode1: '拖曳卡牌來這裡重新排列',
+                    drag_prompt_mode2: '從下方選擇${count}張卡牌，拖曳到上方並排列',
+                    drop_prompt_mode2: '拖曳卡牌到這裡',
+                    card_time_unit: '分鐘',
+                },
+                'zh-CN': {
+                    title: '数字卡牌排列游戏 🃏',
+                    title_mode1: '数字卡牌排列练习(固定卡牌)',
+                    title_mode2: '数字卡牌排列练习(最佳组合)',
+                    title_mode3: '数字卡牌排列大激斗',
+                    teaching_title: '数字卡牌排列教学',
+                    objective_prefix: '💡 拖拽卡牌到这里重新排列，',
+                    objective_largest: '组成一个<span class="font-bold text-rose-600">最大的${count}位数</span>',
+                    objective_smallest: '组成一个<span class="font-bold text-rose-600">最小的${count}位数</span>',
+                    objective_largest_odd: '组成一个<span class="font-bold text-rose-600">最大的${count}位奇数</span>',
+                    objective_largest_even: '组成一个<span class="font-bold text-rose-600">最大的${count}位偶数</span>',
+                    objective_smallest_even: '组成一个<span class="font-bold text-rose-600">最小的${count}位偶数</span>',
+                    objective_smallest_odd: '组成一个<span class="font-bold text-rose-600">最小的${count}位奇数</span>',
+                    objective_target: '组成一个最接近 <span class="font-bold text-indigo-600">${target}</span> 的数字',
+                    objective_mode2_prefix: '💡 从下方${sourceCount}张卡牌中选出${count}张，并在上方',
+                    objective_mode2_suffix: '！',
+                    objective_mode3_welcome: '🔥 准备好迎接10道随机题目的<span class="font-bold text-purple-600">混合大激斗</span>挑战了吗？',
+                    objective_mode3_description: '你将连续挑战10道题目。<br>答对时，剩余时间越多，分数越高！<br>挑战中可能会随机出现带来惊喜奖励或挑战的“特殊关卡”！',
+                    objective_mode4_welcome: '📚 欢迎来到教学模式！请使用下方的控制面板来设定题目。',
+                    countdown: '倒数计时',
+                    seconds: '秒',
+                    check: '检查答案',
+                    reset: '重新开始',
+                    start_battle: '开始挑战',
+                    progress_text: '进度',
+                    score_text: '总分',
+                    combo_text: '连击',
+                    battle_end_message: '🎉 挑战结束！你的最终总分是：<span class="font-bold text-green-600">${score}</span> 分！',
+                    battle_summary_title: '挑战结果总结',
+                    header_round: '题号',
+                    header_objective: '题目要求',
+                    header_your_answer: '你的答案',
+                    header_correct_answer: '正确答案',
+                    header_result: '结果',
+                    header_time: '时间 (秒)',
+                    header_score: '得分',
+                    special_lightning: '闪电快答关',
+                    special_memory: '记忆力大考验',
+                    special_bonus: '奖励关卡',
+                    special_target: '数字射靶关',
+                    settings_title: '游戏设置 ⚙️',
+                    language_label: '网页语言: 🌐',
+                    mode_label: '游戏模式: 🎮',
+                    fixed_mode: '固定卡牌',
+                    optimal_mode: '最佳组合',
+                    battle_mode: '混合大激斗',
+                    teaching_mode: '教学模式',
+                    number_label_fixed: '卡牌数量: 🔢',
+                    number_label_optimal: '多位数数量: 🔢',
+                    number_label_max: '最多卡牌数量: 🔢',
+                    time_label: '游戏时长: ⏱️',
+                    save: '保存并关闭',
+                    sound_label: '游戏音效: 🔊',
+                    teacher_panel_title: '教师控制面板',
+                    teacher_card_setup_label: '1. 卡牌设定',
+                    teacher_clear_cards: '清除卡牌',
+                    teacher_gamemode_label: '2. 玩法模式',
+                    teacher_digit_count_label: '3. 目标数字位数',
+                    teacher_objective_label: '3. 目标类型',
+                    teacher_generate_question: '生成题目',
+                    teacher_show_answer: '显示答案',
+                    teacher_error_card_count: '卡牌数量必须介于${min}到${max}张之间！',
+                    teacher_error_digit_count: '目标数字位数必须小于或等于可选卡牌数量！',
+                    message_not_enough_cards: '请先将所有${count}张卡牌都拖拽到框框内！',
+                    message_correct: '太棒了！你的答案是正确的！',
+                    message_correct_score: '太棒了！答案正确！<span class="font-bold text-green-600">+${score}</span> 分！',
+                    message_time_up_positive: '时间到了! 下次要加油啊!',
+                    message_incorrect_attempts: '不正确。请继续尝试！',
+                    message_incorrect_positive: '答错了! 下次要加油啊!',
+                    message_incorrect_limit: '连续答错3次！正确答案是：${answer}',
+                    message_no_parity_number: '这组数字无法组成符合要求的数字。',
+                    drag_prompt_mode1: '拖拽卡牌到这里重新排列',
+                    drag_prompt_mode2: '从下方选择${count}张卡牌，拖拽到上方并排列',
+                    drop_prompt_mode2: '拖拽卡牌到这里',
+                    card_time_unit: '分钟',
+                },
+                'en': {
+                    title: 'Number Card Arrangement Game 🃏',
+                    title_mode1: 'Practice (Fixed Cards)',
+                    title_mode2: 'Practice (Optimal Combo)',
+                    title_mode3: 'Grand Battle',
+                    teaching_title: 'Number Card Tutorial',
+                    objective_prefix: '💡 Drag cards here to arrange and ',
+                    objective_largest: 'form the <span class="font-bold text-rose-600">largest ${count}-digit number</span>',
+                    objective_smallest: 'form the <span class="font-bold text-rose-600">smallest ${count}-digit number</span>',
+                    objective_largest_odd: 'form the <span class="font-bold text-rose-600">largest ${count}-digit odd number</span>',
+                    objective_largest_even: 'form the <span class="font-bold text-rose-600">largest ${count}-digit even number</span>',
+                    objective_smallest_even: 'form the <span class="font-bold text-rose-600">smallest ${count}-digit even number</span>',
+                    objective_smallest_odd: 'form the <span class="font-bold text-rose-600">smallest ${count}-digit odd number</span>',
+                    objective_target: 'form a number <span class="font-bold text-indigo-600">closest to ${target}</span>',
+                    objective_mode2_prefix: '💡 Select ${count} cards from the ${sourceCount} cards below and ',
+                    objective_mode2_suffix: '!',
+                    objective_mode3_welcome: '🔥 Ready for the <span class="font-bold text-purple-600">Mixed Grand Battle</span> challenge with 10 random questions?',
+                    objective_mode3_description: 'You will face 10 consecutive questions.<br>The more time remaining when you answer correctly, the higher the score!<br>Special rounds with surprising rewards or challenges may appear randomly!',
+                    objective_mode4_welcome: '📚 Welcome to Teaching Mode! Use the control panel below to set up questions.',
+                    countdown: 'Countdown',
+                    seconds: 'seconds',
+                    check: 'Check Answer',
+                    reset: 'Reset',
+                    start_battle: 'Start Challenge',
+                    progress_text: 'Progress',
+                    score_text: 'Total Score',
+                    combo_text: 'COMBO',
+                    battle_end_message: '🎉 Challenge Over! Your final score is: <span class="font-bold text-green-600">${score}</span>!',
+                    battle_summary_title: 'Challenge Summary',
+                    header_round: '#',
+                    header_objective: 'Objective',
+                    header_your_answer: 'Your Answer',
+                    header_correct_answer: 'Correct Answer',
+                    header_result: 'Result',
+                    header_time: 'Time (s)',
+                    header_score: 'Score',
+                    special_lightning: 'Lightning Round',
+                    special_memory: 'Memory Challenge',
+                    special_bonus: 'Bonus Round',
+                    special_target: 'Target Practice',
+                    settings_title: 'Game Settings ⚙️',
+                    language_label: 'Web Language: 🌐',
+                    mode_label: 'Game Mode: 🎮',
+                    fixed_mode: 'Fixed Cards',
+                    optimal_mode: 'Optimal Combination',
+                    battle_mode: 'Mixed Grand Battle',
+                    teaching_mode: 'Teaching Mode',
+                    number_label_fixed: 'Number of Cards: 🔢',
+                    number_label_optimal: 'Number of Digits: 🔢',
+                    number_label_max: 'Max Number of Cards: 🔢',
+                    time_label: 'Game Duration: ⏱️',
+                    save: 'Save and Close',
+                    sound_label: 'Game Sounds: 🔊',
+                    teacher_panel_title: 'Teacher Control Panel',
+                    teacher_card_setup_label: '1. Click digits to add cards',
+                    teacher_clear_cards: 'Clear Cards',
+                    teacher_gamemode_label: '2. Gameplay Mode',
+                    teacher_digit_count_label: '3. Target Digit Count',
+                    teacher_objective_label: '3. Select Objective Type',
+                    teacher_generate_question: 'Generate Question',
+                    teacher_show_answer: 'Show Answer',
+                    teacher_error_card_count: 'Number of cards must be between ${min} and ${max}!',
+                    teacher_error_digit_count: 'Target digit count must be less than or equal to the number of available cards!',
+                    message_not_enough_cards: 'Please drag all ${count} cards into the box first!',
+                    message_correct: 'Awesome! Your answer is correct!',
+                    message_correct_score: 'Awesome! Correct answer! <span class="font-bold text-green-600">+${score}</span> points!',
+                    message_time_up_positive: "Time's up! Better luck next time!",
+                    message_incorrect_attempts: 'Incorrect. Please try again!',
+                    message_incorrect_positive: 'Incorrect! Keep trying!',
+                    message_incorrect_limit: '3 consecutive wrong answers! The correct answer is: ${answer}',
+                    message_no_parity_number: 'This set of numbers cannot form a number that meets the requirement.',
+                    drag_prompt_mode1: 'Drag cards here to rearrange',
+                    drag_prompt_mode2: 'Select ${count} cards from below and arrange them above',
+                    drop_prompt_mode2: 'Drag cards here',
+                    card_time_unit: 'minutes',
+                },
+            };
+            
+            let touchMoveHandler = null;
+            let touchEndHandler = null;
+            
+            function initAudio() {
+                if (audioCtx) return;
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    soundClick = createSound(2000, 'sine', 0.05, 0.1);
+                    soundCorrect = createSound([ { freq: 523.25, dur: 0.1, delay: 0 }, { freq: 783.99, dur: 0.2, delay: 0.1 } ]);
+                    soundIncorrect = createSound(164.81, 'sawtooth', 0.2, 0.2);
+                    soundDrop = createSound(880, 'triangle', 0.1, 0.05);
+                    soundSwoosh = createNoise(0.1);
+                    soundTick = createSound(1500, 'sine', 0.03, 0.1);
+                    soundCombo = [
+                        createSound(587.33, 'triangle', 0.1, 0.1), // Combo 2
+                        createSound(659.25, 'triangle', 0.1, 0.15), // Combo 3
+                        createSound(783.99, 'triangle', 0.1, 0.15), // Combo 4
+                        createSound(880.00, 'triangle', 0.1, 0.2), // Combo 5+
+                    ];
+                } catch(e) { console.error("Web Audio API is not supported in this browser"); }
+            }
+
+            function createSound(freq, type, vol, dur) {
+                if (!audioCtx) return null;
+                const audio = new Audio();
+                const sampleRate = audioCtx.sampleRate;
+                let buffer;
+                if (Array.isArray(freq)) {
+                    const totalDuration = freq.reduce((max, note) => Math.max(max, note.delay + note.dur), 0);
+                    buffer = audioCtx.createBuffer(1, sampleRate * totalDuration, sampleRate);
+                    const channelData = buffer.getChannelData(0);
+                    freq.forEach(note => {
+                        const startSample = Math.floor(note.delay * sampleRate);
+                        const endSample = startSample + Math.floor(note.dur * sampleRate);
+                        for (let i = startSample; i < endSample; i++) {
+                            channelData[i] += Math.sin(2 * Math.PI * note.freq * (i - startSample) / sampleRate) * 0.2;
+                        }
+                    });
+                } else {
+                    buffer = audioCtx.createBuffer(1, sampleRate * dur, sampleRate);
+                    const channelData = buffer.getChannelData(0);
+                    for (let i = 0; i < channelData.length; i++) {
+                        channelData[i] = Math.sin(2 * Math.PI * freq * i / sampleRate) * (1 - i / channelData.length);
+                    }
+                }
+                const wav = audioBufferToWav(buffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                audio.src = URL.createObjectURL(blob);
+                audio.volume = vol || 0.1;
+                return audio;
+            }
+            
+            function createNoise(dur) {
+                if (!audioCtx) return null;
+                const audio = new Audio();
+                const sampleRate = audioCtx.sampleRate;
+                const buffer = audioCtx.createBuffer(1, sampleRate * dur, sampleRate);
+                const channelData = buffer.getChannelData(0);
+                for (let i = 0; i < channelData.length; i++) {
+                    channelData[i] = (Math.random() * 2 - 1) * (1 - i / channelData.length);
+                }
+                const wav = audioBufferToWav(buffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                audio.src = URL.createObjectURL(blob);
+                audio.volume = 0.05;
+                return audio;
+            }
+
+            function audioBufferToWav(buffer) {
+                let numOfChan = buffer.numberOfChannels,
+                len = buffer.length * numOfChan * 2 + 44,
+                view = new DataView(new ArrayBuffer(len)),
+                channels = [], i, sample,
+                offset = 0, pos = 0;
+                setUint32(0x46464952); setUint32(len - 8); setUint32(0x45564157);
+                setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+                setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
+                setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164);
+                setUint32(len - pos - 4);
+                function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+                function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+                for (i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
+                while (pos < len) {
+                    for (i = 0; i < numOfChan; i++) {
+                        sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                        sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+                        view.setInt16(pos, sample, true); pos += 2;
+                    }
+                    offset++;
+                }
+                return view;
+            }
+
+            function playSound(audio) {
+                if (!soundEnabled || !audio) return;
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Sound play failed:", e));
+            }
+
+            function getTranslation(key, params = {}) {
+                let text = translations[currentLanguage][key];
+                if (text) {
+                    for (const param in params) { text = text.replace(`\${${param}}`, params[param]); }
+                }
+                return text || key;
+            }
+            
+            function getNumberCountLabelKey(mode) {
+                if (mode === 'mode1' || mode === 'mode4') return 'number_label_fixed';
+                if (mode === 'mode2') return 'number_label_optimal';
+                if (mode === 'mode3') return 'number_label_max';
+                return 'number_label_fixed'; // Default
+            }
+
+            function updateUIForLanguage() {
+                const gameTitle = document.getElementById('game-title');
+                let titleKey = 'title';
+                switch (currentMode) {
+                    case 'mode1': titleKey = 'title_mode1'; break;
+                    case 'mode2': titleKey = 'title_mode2'; break;
+                    case 'mode3': titleKey = 'title_mode3'; break;
+                    case 'mode4': titleKey = 'teaching_title'; break;
+                }
+                gameTitle.innerHTML = getTranslation(titleKey);
+
+                document.getElementById('timer-text').textContent = getTranslation('countdown');
+                document.getElementById('second-text').textContent = getTranslation('seconds');
+                document.getElementById('check-text').textContent = getTranslation('check');
+                document.getElementById('reset-text').textContent = getTranslation('reset');
+                document.getElementById('start-battle-text').textContent = getTranslation('start_battle');
+                document.getElementById('progress-text').textContent = getTranslation('progress_text');
+                document.getElementById('score-text').textContent = getTranslation('score_text');
+                document.getElementById('settings-title').textContent = getTranslation('settings_title');
+                document.getElementById('language-label').textContent = getTranslation('language_label');
+                document.getElementById('mode-label').textContent = getTranslation('mode_label');
+                document.getElementById('mode-select').options[0].textContent = getTranslation('teaching_mode');
+                document.getElementById('mode-select').options[1].textContent = getTranslation('fixed_mode');
+                document.getElementById('mode-select').options[2].textContent = getTranslation('optimal_mode');
+                document.getElementById('mode-select').options[3].textContent = getTranslation('battle_mode');
+                numberCountLabel.textContent = getTranslation(getNumberCountLabelKey(currentMode));
+                document.getElementById('time-label').textContent = getTranslation('time_label');
+                document.getElementById('close-settings-button').textContent = getTranslation('save');
+                document.getElementById('sound-label').textContent = getTranslation('sound_label');
+                document.getElementById('time-select').options[2].textContent = `1 ${getTranslation('card_time_unit')}`;
+                document.getElementById('time-select').options[3].textContent = `1.5 ${getTranslation('card_time_unit')}`;
+                document.getElementById('time-select').options[4].textContent = `2 ${getTranslation('card_time_unit')}`;
+
+                // Update results table headers
+                document.getElementById('battle-summary-title').textContent = getTranslation('battle_summary_title');
+                document.getElementById('header-round').textContent = getTranslation('header_round');
+                document.getElementById('header-objective').textContent = getTranslation('header_objective');
+                document.getElementById('header-your-answer').textContent = getTranslation('header_your_answer');
+                document.getElementById('header-correct-answer').textContent = getTranslation('header_correct_answer');
+                document.getElementById('header-result').textContent = getTranslation('header_result');
+                document.getElementById('header-time').textContent = getTranslation('header_time');
+                document.getElementById('header-score').textContent = getTranslation('header_score');
+
+                // Update teacher controls text
+                document.getElementById('teacher-panel-title').textContent = getTranslation('teacher_panel_title');
+                document.getElementById('teacher-card-setup-label').textContent = getTranslation('teacher_card_setup_label');
+                document.getElementById('clear-manual-cards').textContent = getTranslation('teacher_clear_cards');
+                document.getElementById('teacher-gamemode-label').textContent = getTranslation('teacher_gamemode_label');
+                document.getElementById('teacher-mode1-btn').textContent = getTranslation('fixed_mode');
+                document.getElementById('teacher-mode2-btn').textContent = getTranslation('optimal_mode');
+                document.getElementById('teacher-digit-count-label').textContent = getTranslation('teacher_digit_count_label');
+                document.getElementById('teacher-objective-label').textContent = getTranslation('teacher_objective_label');
+                document.getElementById('generate-question-btn').textContent = getTranslation('teacher_generate_question');
+                document.getElementById('show-answer-btn').textContent = getTranslation('teacher_show_answer');
+                
+                updateNumberCountOptions(currentMode); // Ensure options are correct for the language
+                initGame();
+            }
+            
+            function createStarBurst(x, y) {
+                let particleCount = 12;
+                while(particleCount--) {
+                    const star = document.createElement('div');
+                    star.innerHTML = '✨';
+                    star.style.position = 'fixed'; star.style.zIndex = '2000';
+                    star.style.fontSize = `${Math.random() * 15 + 10}px`;
+                    star.style.pointerEvents = 'none'; star.style.left = `${x}px`;
+                    star.style.top = `${y}px`; star.style.transform = 'translate(-50%, -50%)';
+                    star.style.transition = 'transform 0.6s ease-out, opacity 0.6s ease-out';
+                    document.body.appendChild(star);
+                    requestAnimationFrame(() => {
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = Math.random() * 50 + 50;
+                        const transform = `translate(${Math.cos(angle) * distance - star.offsetWidth/2}px, ${Math.sin(angle) * distance - star.offsetHeight/2}px) scale(0.5)`;
+                        star.style.transform = transform; star.style.opacity = '0';
+                    });
+                    setTimeout(() => { star.remove(); }, 600);
+                }
+            }
+
+            const dynamicObjectives = [
+                { type: 'largest', textKey: 'objective_largest' },
+                { type: 'smallest', textKey: 'objective_smallest' },
+                { type: 'largest-odd', textKey: 'objective_largest_odd' },
+                { type: 'largest-even', textKey: 'objective_largest_even' },
+                { type: 'smallest-odd', textKey: 'objective_smallest_odd' },
+                { type: 'smallest-even', textKey: 'objective_smallest_even' }
+            ];
+            
+            function updateNumberCountOptions(mode) {
+                cardCountSelect.innerHTML = '';
+                numberCountLabel.textContent = getTranslation(getNumberCountLabelKey(mode));
+
+                if (mode === 'mode1' || mode === 'mode4') {
+                    for (let i = 3; i <= 9; i++) {
+                        const option = document.createElement('option');
+                        option.value = i; option.textContent = i; cardCountSelect.appendChild(option);
+                    }
+                    cardCountSelect.value = 5;
+                } else if (mode === 'mode2') {
+                    for (let i = 3; i <= 7; i++) {
+                        const option = document.createElement('option');
+                        option.value = i; option.textContent = i; cardCountSelect.appendChild(option);
+                    }
+                    cardCountSelect.value = 5;
+                } else if (mode === 'mode3') {
+                    for (let i = 3; i <= 9; i++) {
+                        const option = document.createElement('option');
+                        option.value = i; option.textContent = i; cardCountSelect.appendChild(option);
+                    }
+                    cardCountSelect.value = 5; // Default 5
+                }
+            }
+
+            function renderGameArea(mode) {
+                gameArea.innerHTML = '';
+                if (mode === 'mode1' || mode === 'mode4') {
+                    gameArea.innerHTML = `<div id="card-area" class="card-container bg-gray-50 border-dashed border-gray-400"></div>`;
+                } else if (mode === 'mode2') {
+                    gameArea.innerHTML = `
+                        <p class="text-center text-gray-600 font-medium">${getTranslation('drag_prompt_mode2', { count: CARD_COUNT })}</p>
+                        <div id="card-drop-area" class="card-container bg-gray-50 border-dashed border-gray-400">
+                            <p class="text-gray-500 text-sm text-center">${getTranslation('drop_prompt_mode2')}</p>
+                        </div>
+                        <div id="card-source-area" class="card-container bg-gray-200 mt-4"></div>`;
+                }
+            }
+            
+            function getRandomUniqueNumbers(count, max = 10) {
+                const numbers = [];
+                const pool = Array.from({length: max}, (_, i) => i);
+                for (let i = 0; i < count; i++) {
+                    if (pool.length === 0) break;
+                    const randomIndex = Math.floor(Math.random() * pool.length);
+                    numbers.push(pool.splice(randomIndex, 1)[0]);
+                }
+                return numbers;
+            }
+
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+
+            function generateCards(count, objectiveType = null) {
+                let numbers = []; const hasZero = Math.random() < 0.5;
+                const pool = Array.from({length: 10}, (_, i) => i);
+                if (count >= 7) {
+                    for (let i = 0; i < count; i++) { numbers.push(Math.floor(Math.random() * 10)); }
+                } else {
+                    const rand = Math.random();
+                    if (rand < 0.70) {
+                        if (hasZero) { numbers.push(0); numbers.push(...getRandomUniqueNumbers(count - 1, 9).map(n => n + 1)); } 
+                        else { numbers.push(...getRandomUniqueNumbers(count, 9).map(n => n + 1)); }
+                    } else if (rand < 0.95) {
+                        const uniqueCount = count - 1;
+                        if (hasZero) {
+                            numbers.push(0); const uniqueNumbers = getRandomUniqueNumbers(uniqueCount - 1, 9).map(n => n + 1);
+                            const pairNumber = uniqueNumbers[Math.floor(Math.random() * uniqueNumbers.length)];
+                            numbers.push(...uniqueNumbers, pairNumber);
+                        } else {
+                            const uniqueNumbers = getRandomUniqueNumbers(uniqueCount, 9).map(n => n + 1);
+                            const pairNumber = uniqueNumbers[Math.floor(Math.random() * uniqueCount)];
+                            numbers.push(...uniqueNumbers, pairNumber);
+                        }
+                    } else {
+                        if (count >= 4) {
+                            const uniqueCount = count - 2; const uniqueNumbers = getRandomUniqueNumbers(uniqueCount);
+                            const pair1 = uniqueNumbers[Math.floor(Math.random() * uniqueCount)];
+                            const pair2 = uniqueNumbers[Math.floor(Math.random() * uniqueCount)];
+                            numbers.push(...uniqueNumbers, pair1, pair2);
+                        } else {
+                            const uniqueCount = count - 1; const uniqueNumbers = getRandomUniqueNumbers(uniqueCount);
+                            const pairNumber = uniqueNumbers[Math.floor(Math.random() * uniqueCount)];
+                            numbers.push(...uniqueNumbers, pairNumber);
+                        }
+                    }
+                }
+                if (objectiveType === 'largest-odd' || objectiveType === 'smallest-odd') {
+                    if (!numbers.some(num => num % 2 !== 0)) {
+                        const oddNumbers = [1, 3, 5, 7, 9];
+                        const randomIndex = Math.floor(Math.random() * numbers.length);
+                        const randomOdd = oddNumbers[Math.floor(Math.random() * oddNumbers.length)];
+                        numbers[randomIndex] = randomOdd;
+                    }
+                } else if (objectiveType === 'smallest-even' || objectiveType === 'largest-even') {
+                    if (!numbers.some(num => num % 2 === 0)) {
+                        const evenNumbers = [0, 2, 4, 6, 8];
+                        const randomIndex = Math.floor(Math.random() * numbers.length);
+                        const randomEven = evenNumbers[Math.floor(Math.random() * evenNumbers.length)];
+                        numbers[randomIndex] = randomEven;
+                    }
+                }
+                const shuffledNumbers = shuffle(numbers);
+                return shuffledNumbers.map((num, index) => ({ value: num, color: cardColors[index % cardColors.length] }));
+            }
+            
+            function adjustCardSize(cardCount) {
+                const cardElements = document.querySelectorAll('.card');
+                let cardWidth, cardHeight, fontSize;
+                if (cardCount <= 3) { cardWidth = '10rem'; cardHeight = '12rem'; fontSize = '6rem'; } 
+                else if (cardCount === 4) { cardWidth = '8.5rem'; cardHeight = '11rem'; fontSize = '5.5rem'; } 
+                else if (cardCount === 5) { cardWidth = '7.5rem'; cardHeight = '10rem'; fontSize = '5rem'; } 
+                else if (cardCount === 6) { cardWidth = '6.5rem'; cardHeight = '9rem'; fontSize = '4.5rem'; } 
+                else if (cardCount === 7) { cardWidth = '5.5rem'; cardHeight = '8rem'; fontSize = '4rem'; } 
+                else if (cardCount >= 8 && cardCount <= 9) { cardWidth = '4.5rem'; cardHeight = '6.5rem'; fontSize = '3rem'; }
+                else if (cardCount > 9) { cardWidth = '4rem'; cardHeight = '5.5rem'; fontSize = '2.5rem'; }
+                cardElements.forEach(card => {
+                    card.style.width = cardWidth; card.style.height = cardHeight; card.style.fontSize = fontSize;
+                });
+            }
+
+            function renderCards(cardsArray, container, subMode) {
+                container.innerHTML = '';
+                if (subMode === 'mode2' && container.id === 'card-drop-area' && cardsArray.length === 0) {
+                    const placeholder = document.createElement('p');
+                    placeholder.className = 'text-gray-500 text-sm text-center';
+                    placeholder.textContent = getTranslation('drop_prompt_mode2');
+                    container.appendChild(placeholder);
+                }
+                cardsArray.forEach((card, index) => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'card shadow-md';
+                    cardElement.textContent = card.value; cardElement.dataset.index = index;
+                    cardElement.setAttribute('draggable', true);
+                    cardElement.style.backgroundColor = card.color;
+                    container.appendChild(cardElement);
+                });
+            }
+
+            function findSmallestNumber(nums) {
+                if (nums.length === 0) return '';
+                let tempNums = [...nums].sort((a, b) => a - b);
+                if (tempNums.length > 1 && tempNums[0] === 0) {
+                    const firstNonZeroIndex = tempNums.findIndex(num => num !== 0);
+                    if (firstNonZeroIndex !== -1) {
+                        const firstNonZero = tempNums[firstNonZeroIndex];
+                        tempNums.splice(firstNonZeroIndex, 1);
+                        tempNums.unshift(firstNonZero);
+                    }
+                }
+                return tempNums.join('');
+            }
+            
+            function findLargestNumber(nums) {
+                if (nums.length === 0) return '';
+                return [...nums].sort((a, b) => b - a).join('');
+            }
+            
+            function findOptimalSubset(allNums, count, objectiveType) {
+                const isSmallest = objectiveType.includes('smallest');
+                const isEven = objectiveType.includes('even');
+                const isOdd = objectiveType.includes('odd');
+                const removeOnce = (arr, value) => {
+                    const index = arr.indexOf(value);
+                    if (index > -1) { const newArr = [...arr]; newArr.splice(index, 1); return newArr; }
+                    return arr;
+                };
+                if (!isEven && !isOdd) {
+                    const sorted = [...allNums].sort((a, b) => isSmallest ? a - b : b - a);
+                    return sorted.slice(0, count);
+                }
+                const uniqueCandidatesForLastDigit = [...new Set(allNums.filter(n => {
+                    if (isEven) return n % 2 === 0; if (isOdd) return n % 2 !== 0; return false;
+                }))];
+                if (uniqueCandidatesForLastDigit.length === 0) return null;
+                let bestSubset = null; let bestResultingNumberStr = null;
+                for (const lastDigit of uniqueCandidatesForLastDigit) {
+                    let remainingNums = removeOnce(allNums, lastDigit);
+                    if (remainingNums.length < count - 1) continue;
+                    remainingNums.sort((a, b) => isSmallest ? a - b : b - a);
+                    const otherDigits = remainingNums.slice(0, count - 1);
+                    const currentSubset = [...otherDigits, lastDigit];
+                    const currentResultingNumberStr = calculateCorrectAnswer(currentSubset, objectiveType);
+                    if (!currentResultingNumberStr || currentResultingNumberStr.length !== count) continue;
+                    if (bestResultingNumberStr === null || 
+                        (isSmallest && currentResultingNumberStr < bestResultingNumberStr) || 
+                        (!isSmallest && currentResultingNumberStr > bestResultingNumberStr)) {
+                        bestResultingNumberStr = currentResultingNumberStr;
+                        bestSubset = currentSubset;
+                    }
+                }
+                return bestSubset;
+            }
+
+            function showMessage(text, type = 'info', duration = 3000, iconData = null) {
+                messageContainer.className = 'bg-blue-100 border border-blue-400 text-blue-700 px-8 py-6 rounded-xl relative text-center'; // Reset classes
+                messageContainer.classList.add('pop-animation');
+
+                if (iconData) {
+                    messageIcon.textContent = iconData.icon;
+                    messageIcon.className = 'text-5xl'; // Reset class
+                    if (iconData.animation) {
+                         messageIcon.classList.add(iconData.animation);
+                    }
+                    messageIcon.classList.remove('hidden');
+                } else {
+                    messageIcon.classList.add('hidden');
+                }
+
+                switch(type) {
+                    case 'error': messageContainer.classList.replace('bg-blue-100', 'bg-red-100'); messageContainer.classList.replace('border-blue-400', 'border-red-400'); messageContainer.classList.replace('text-blue-700', 'text-red-700'); break;
+                    case 'success': messageContainer.classList.replace('bg-blue-100', 'bg-green-100'); messageContainer.classList.replace('border-blue-400', 'border-green-400'); messageContainer.classList.replace('text-blue-700', 'text-green-700'); break;
+                }
+                messageText.innerHTML = text;
+
+                if (duration) { 
+                    setTimeout(() => { 
+                        messageContainer.classList.add('hidden'); 
+                        if (iconData && iconData.animation) {
+                            messageIcon.classList.remove(iconData.animation);
+                        }
+                    }, duration); 
+                }
+            }
+
+            function startTimer() {
+                clearInterval(timerInterval);
+                timerInSeconds = isBattleModeActive ? currentSpecialRoundType === 'lightning' ? 10 : parseInt(timeSelect.value, 10) : initialTime;
+                timerDisplay.textContent = timerInSeconds;
+                bombIcon.classList.remove('bomb-shake');
+                timerInterval = setInterval(() => {
+                    timerInSeconds--;
+                    timerDisplay.textContent = timerInSeconds;
+                    if (timerInSeconds <= 5 && timerInSeconds > 0) {
+                        playSound(soundTick);
+                    }
+                    if (timerInSeconds <= 10) { 
+                        bombIcon.classList.add('bomb-shake'); 
+                    }
+                    if (timerInSeconds <= 0) {
+                        stopTimer();
+                        bombIcon.classList.remove('bomb-shake');
+                        checkButton.disabled = true;
+                        
+                        if (currentSpecialRoundType === 'memory') {
+                             revealMemoryCards();
+                        }
+                        
+                        if (isBattleModeActive) {
+                            comboCounter = 0;
+                            updateComboDisplay();
+                            recordBattleResult('---', false, initialTime, 0);
+                            showMessage(getTranslation('message_time_up_positive'), 'error', 2000, {icon: '⏰', animation: 'vibrate-animation'});
+                            setTimeout(nextBattleRound, 2000);
+                        } else {
+                            const answerMessage = getTranslation('message_time_up', { answer: correctNumber });
+                            showMessage(answerMessage, 'error', null);
+                        }
+                    }
+                }, 1000);
+            }
+
+            function stopTimer() { clearInterval(timerInterval); bombIcon.classList.remove('bomb-shake'); }
+
+            function initGame() {
+                stopTimer();
+                isBattleModeActive = false;
+                wrongAttempts = 0;
+                initialTime = parseInt(timeSelect.value, 10);
+                timerInSeconds = initialTime;
+                timerDisplay.textContent = timerInSeconds;
+                messageContainer.classList.add('hidden');
+                updateUIVisibility();
+                checkButton.disabled = false;
+
+                // Title update logic moved here to be central
+                const gameTitle = document.getElementById('game-title');
+                let titleKey = 'title';
+                switch (currentMode) {
+                    case 'mode1': titleKey = 'title_mode1'; break;
+                    case 'mode2': titleKey = 'title_mode2'; break;
+                    case 'mode3': titleKey = 'title_mode3'; break;
+                    case 'mode4': titleKey = 'teaching_title'; break;
+                }
+                gameTitle.innerHTML = getTranslation(titleKey);
+
+
+                if (currentMode === 'mode1' || currentMode === 'mode2') {
+                    CARD_COUNT = parseInt(cardCountSelect.value, 10);
+                    const objective = dynamicObjectives[Math.floor(Math.random() * dynamicObjectives.length)];
+                    currentObjective = objective.type;
+                    const text = getTranslation(objective.textKey, { count: CARD_COUNT });
+                    gameObjective.innerHTML = (currentMode === 'mode1' ? getTranslation('objective_prefix') + text + '！' : getTranslation('objective_mode2_prefix', { sourceCount: CARD_COUNT + 2, count: CARD_COUNT }) + text + getTranslation('objective_mode2_suffix'));
+
+                    if (currentMode === 'mode1') {
+                        cards = generateCards(CARD_COUNT, currentObjective);
+                        correctNumber = calculateCorrectAnswer(cards.map(c => c.value), currentObjective);
+                        renderGameArea('mode1');
+                        const dropArea = document.getElementById('card-area');
+                        renderCards(shuffle([...cards]), dropArea, 'mode1');
+                        addDragDropListeners(dropArea);
+                        adjustCardSize(CARD_COUNT);
+                    } else { // mode2
+                        CARD_SOURCE_COUNT = CARD_COUNT + 2;
+                        const allCards = generateCards(CARD_SOURCE_COUNT, currentObjective);
+                        const optimalSubset = findOptimalSubset(allCards.map(c => c.value), CARD_COUNT, currentObjective);
+                        if (!optimalSubset) {
+                            showMessage(getTranslation('message_no_parity_number'), 'error', null);
+                            checkButton.disabled = true; return;
+                        }
+                        correctNumber = calculateCorrectAnswer(optimalSubset, currentObjective);
+                        cards = allCards;
+                        renderGameArea('mode2');
+                        const dropArea = document.getElementById('card-drop-area');
+                        const sourceArea = document.getElementById('card-source-area');
+                        renderCards([], dropArea, 'mode2');
+                        renderCards(shuffle([...cards]), sourceArea, 'mode2');
+                        addDragDropListeners(dropArea, sourceArea);
+                        adjustCardSize(CARD_SOURCE_COUNT);
+                    }
+                    startTimer();
+                } else if (currentMode === 'mode3') {
+                    gameObjective.innerHTML = getTranslation('objective_mode3_welcome');
+                    gameArea.innerHTML = `<p class="text-center text-gray-600 text-xl mt-4">${getTranslation('objective_mode3_description')}</p>`;
+                } else if (currentMode === 'mode4') {
+                    initTeachingMode();
+                }
+            }
+            
+            function generateBattleQuestions() {
+                battleQuestions = [];
+                const maxCardCount = parseInt(cardCountSelect.value, 10);
+                const battleTime = parseInt(timeSelect.value, 10);
+
+                const possibleSpecialIndexes = [2, 3, 4, 5, 6, 7, 8];
+                shuffle(possibleSpecialIndexes);
+                const specialIndexes = possibleSpecialIndexes.slice(0, Math.floor(Math.random() * 2) + 1); // 1 or 2 special rounds
+                const specialTypes = ['lightning', 'memory', 'bonus', 'target'];
+
+                for(let i=0; i<TOTAL_ROUNDS; i++) {
+                    const specialType = specialIndexes.includes(i) ? specialTypes[Math.floor(Math.random() * specialTypes.length)] : null;
+                    let subMode = (specialType === 'bonus' || specialType === 'target') ? 'mode1' : (Math.random() < 0.5 ? 'mode1' : 'mode2');
+                    let randomCardCount = (specialType === 'bonus') ? 3 : Math.floor(Math.random() * (maxCardCount - 3 + 1)) + 3;
+                    
+                    if ((specialType === 'target' || specialType === 'memory') && randomCardCount > 5) {
+                        randomCardCount = 5;
+                    }
+
+                    if (subMode === 'mode2' && randomCardCount > 7) {
+                        randomCardCount = 7;
+                    }
+
+                    let objective;
+                    if (specialType === 'target') {
+                        objective = { type: 'target', textKey: 'objective_target' };
+                    } else {
+                        const availableObjectives = dynamicObjectives.filter(obj => obj.type !== 'target');
+                        objective = availableObjectives[Math.floor(Math.random() * availableObjectives.length)];
+                    }
+
+                    let targetNumber = null;
+                    if (objective.type === 'target') {
+                        let min = Math.pow(10, randomCardCount - 1);
+                        let max = Math.pow(10, randomCardCount) - 1;
+                        targetNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+                    }
+
+                    battleQuestions.push({ 
+                        subMode, 
+                        cardCount: randomCardCount, 
+                        time: battleTime, 
+                        objectiveType: objective.type, 
+                        objectiveTextKey: objective.textKey,
+                        specialType: specialType,
+                        targetNumber: targetNumber
+                    });
+                }
+            }
+
+            function startBattle() {
+                isBattleModeActive = true;
+                currentRound = 0;
+                battleTotalScore = 0;
+                battleResults = [];
+                comboCounter = 0;
+                updateComboDisplay();
+                scoreDisplay.textContent = 0;
+                generateBattleQuestions();
+                updateUIVisibility();
+                nextBattleRound();
+            }
+
+            function nextBattleRound() {
+                currentRound++;
+                if (currentRound > TOTAL_ROUNDS) {
+                    endBattle(); return;
+                }
+                progressDisplay.textContent = `${currentRound}/${TOTAL_ROUNDS}`;
+                progressBar.style.width = `${(currentRound / TOTAL_ROUNDS) * 100}%`;
+                wrongAttempts = 0;
+                messageContainer.classList.add('hidden');
+                checkButton.disabled = false;
+
+                const question = battleQuestions[currentRound - 1];
+                CARD_COUNT = question.cardCount;
+                currentObjective = question.objectiveType;
+                currentSpecialRoundType = question.specialType;
+                initialTime = currentSpecialRoundType === 'lightning' ? 10 : question.time;
+
+                let specialPrefix = '';
+                if(currentSpecialRoundType === 'lightning') specialPrefix = `⚡️ ${getTranslation('special_lightning')}! `;
+                if(currentSpecialRoundType === 'memory') specialPrefix = `🧠 ${getTranslation('special_memory')}! `;
+                if(currentSpecialRoundType === 'bonus') specialPrefix = `💰 ${getTranslation('special_bonus')}! `;
+                if(currentSpecialRoundType === 'target') specialPrefix = `🎯 ${getTranslation('special_target')}! `;
+
+                const text = getTranslation(question.objectiveTextKey, { count: CARD_COUNT, target: question.targetNumber });
+
+                if (question.subMode === 'mode1') {
+                    gameObjective.innerHTML = specialPrefix + (question.objectiveType === 'target' ? text : getTranslation('objective_prefix') + text + '！');
+                    
+                    while (true) {
+                        cards = generateCards(CARD_COUNT, currentObjective);
+                        correctNumber = calculateCorrectAnswer(cards.map(c => c.value), currentObjective, question.targetNumber);
+                        if (correctNumber) break;
+                    }
+
+                    renderGameArea('mode1');
+                    const dropArea = document.getElementById('card-area');
+                    renderCards(shuffle([...cards]), dropArea, 'mode1');
+                    addDragDropListeners(dropArea);
+                    adjustCardSize(CARD_COUNT);
+                } else { // mode2
+                    const extraCards = Math.floor(Math.random() * 4) + 1;
+                    CARD_SOURCE_COUNT = Math.min(CARD_COUNT + extraCards, 12);
+                    gameObjective.innerHTML = specialPrefix + getTranslation('objective_mode2_prefix', { sourceCount: CARD_SOURCE_COUNT, count: CARD_COUNT }) + text + getTranslation('objective_mode2_suffix');
+                    
+                    let allCards;
+                    while (true) {
+                        allCards = generateCards(CARD_SOURCE_COUNT, currentObjective);
+                        const optimalSubset = findOptimalSubset(allCards.map(c => c.value), CARD_COUNT, currentObjective);
+                        if (optimalSubset) {
+                            correctNumber = calculateCorrectAnswer(optimalSubset, currentObjective, question.targetNumber);
+                            if (correctNumber) break;
+                        }
+                    }
+                    cards = allCards;
+                    renderGameArea('mode2');
+                    const dropArea = document.getElementById('card-drop-area');
+                    const sourceArea = document.getElementById('card-source-area');
+                    renderCards([], dropArea, 'mode2');
+                    renderCards(shuffle([...cards]), sourceArea, 'mode2');
+                    addDragDropListeners(dropArea, sourceArea);
+                    adjustCardSize(CARD_SOURCE_COUNT);
+                }
+
+                if (currentSpecialRoundType === 'memory') {
+                    const allRenderedCards = document.querySelectorAll('#game-area .card');
+                    setTimeout(() => {
+                        allRenderedCards.forEach(card => {
+                            card.dataset.value = card.textContent;
+                            card.textContent = '?';
+                            card.classList.add('flipped');
+                        });
+                        playSound(soundSwoosh);
+                    }, 3000);
+                }
+                
+                startTimer();
+            }
+
+            function endBattle() {
+                isBattleModeActive = false;
+                stopTimer();
+                updateUIVisibility();
+                gameArea.innerHTML = '';
+                gameObjective.innerHTML = getTranslation('battle_end_message', { score: battleTotalScore });
+
+                battleResultsBody.innerHTML = '';
+                battleResults.forEach(result => {
+                    const row = document.createElement('tr');
+                    row.className = `border-b ${result.isCorrect ? 'bg-green-50' : 'bg-red-50'}`;
+                    row.innerHTML = `
+                        <td class="p-3 font-bold text-center">${result.round}</td>
+                        <td class="p-3 text-sm">${result.objectiveHTML}</td>
+                        <td class="p-3 font-mono text-lg">${result.userAnswer}</td>
+                        <td class="p-3 font-mono text-lg">${result.correctAnswer}</td>
+                        <td class="p-3 text-2xl text-center">${result.isCorrect ? '✔️' : '❌'}</td>
+                        <td class="p-3 text-right">${result.timeSpent}</td>
+                        <td class="p-3 font-bold text-right ${result.score > 0 ? 'text-green-600' : 'text-red-600'}">${result.score}</td>
+                    `;
+                    battleResultsBody.appendChild(row);
+                });
+                battleResultsContainer.classList.remove('hidden');
+
+            }
+            
+            function updateComboDisplay() {
+                if (isBattleModeActive && comboCounter > 1) {
+                    let comboText = `x${comboCounter} ${getTranslation('combo_text')}`;
+                    if (comboCounter >= 3) comboText += ' 🔥';
+                    comboDisplay.innerHTML = comboText;
+                    comboDisplay.classList.remove('hidden');
+                } else {
+                    comboDisplay.classList.add('hidden');
+                }
+            }
+
+            function updateUIVisibility() {
+                const isMode3 = currentMode === 'mode3';
+                const isMode4 = currentMode === 'mode4';
+                
+                checkButton.classList.toggle('hidden', isMode3 || isMode4 || !isBattleModeActive);
+                resetButton.classList.toggle('hidden', isMode3 || isMode4);
+                startBattleButton.classList.toggle('hidden', !isMode3 || isBattleModeActive);
+                teacherControls.classList.toggle('hidden', !isMode4);
+                
+                timerContainer.classList.toggle('hidden', isMode4 || (isMode3 && !isBattleModeActive));
+                battleStats.classList.toggle('hidden', !isBattleModeActive);
+                
+                if (isBattleModeActive) {
+                    checkButton.classList.remove('hidden');
+                    comboDisplay.classList.toggle('hidden', comboCounter <= 1);
+                } else {
+                    comboDisplay.classList.add('hidden');
+                }
+
+                numberSettings.style.display = isMode4 ? 'none' : 'flex';
+                timeSettings.style.display = isMode4 ? 'none' : 'flex';
+
+                battleResultsContainer.classList.add('hidden');
+                teacherShowAnswerContainer.classList.add('hidden');
+            }
+
+            function recordBattleResult(userAnswer, isCorrect, timeSpent, score) {
+                if (!isBattleModeActive) return;
+                battleResults.push({
+                    round: currentRound,
+                    objectiveHTML: gameObjective.innerHTML,
+                    userAnswer: userAnswer,
+                    correctAnswer: correctNumber,
+                    isCorrect: isCorrect,
+                    timeSpent: timeSpent,
+                    score: score
+                });
+            }
+
+            function getPermutations(arr) {
+                if (arr.length === 0) return [[]];
+                const firstEl = arr[0];
+                const rest = arr.slice(1);
+                const permsWithoutFirst = getPermutations(rest);
+                const allPermutations = [];
+                permsWithoutFirst.forEach(perm => {
+                    for (let i = 0; i <= perm.length; i++) {
+                        const permWithFirst = [...perm.slice(0, i), firstEl, ...perm.slice(i)];
+                        allPermutations.push(permWithFirst);
+                    }
+                });
+                const uniqueStrings = [...new Set(allPermutations.map(p => p.join('')))];
+                return uniqueStrings.map(s => s.split('').map(Number));
+            }
+
+            function calculateCorrectAnswer(nums, objectiveType, targetNumber = null) {
+                let numbers = [...nums];
+                const removeElement = (arr, element) => {
+                    const index = arr.indexOf(element);
+                    if (index > -1) { const newArr = [...arr]; newArr.splice(index, 1); return newArr; }
+                    return arr;
+                };
+
+                const allOriginalDigitsWereZero = numbers.every(n => n === 0);
+                
+                switch (objectiveType) {
+                    case 'target': {
+                        if (targetNumber === null) return null;
+                        const perms = getPermutations(nums);
+                        let closestNum = -1;
+                        let minDiff = Infinity;
+                        
+                        for (const p of perms) {
+                            if (p.length > 1 && p[0] === 0) continue;
+                            const num = parseInt(p.join(''), 10);
+                            const diff = Math.abs(num - targetNumber);
+
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                closestNum = num;
+                            } else if (diff === minDiff) {
+                                closestNum = Math.min(closestNum, num);
+                            }
+                        }
+                        return closestNum !== -1 ? closestNum.toString() : null;
+                    }
+                    case 'largest': 
+                        return findLargestNumber(numbers);
+                    case 'smallest':
+                        if (allOriginalDigitsWereZero) return numbers.join('');
+                        return findSmallestNumber(numbers);
+                    
+                    case 'largest-odd': {
+                        let largestResult = null;
+                        const uniqueOddDigits = [...new Set(numbers.filter(n => n % 2 !== 0))];
+                        if (uniqueOddDigits.length === 0) return null;
+
+                        for (const oddDigit of uniqueOddDigits) {
+                            const remaining = removeElement([...numbers], oddDigit);
+                            const prefix = findLargestNumber(remaining);
+                            const candidate = prefix + oddDigit;
+                            
+                            if (candidate.length !== numbers.length) continue;
+                            if (!allOriginalDigitsWereZero && candidate.length > 1 && candidate.startsWith('0')) continue;
+
+                            if (largestResult === null || candidate > largestResult) {
+                                largestResult = candidate;
+                            }
+                        }
+                        return largestResult;
+                    }
+
+                    case 'smallest-odd': {
+                        let smallestResult = null;
+                        const uniqueOddDigits = [...new Set(numbers.filter(n => n % 2 !== 0))];
+                        if (uniqueOddDigits.length === 0) return null;
+
+                        for (const oddDigit of uniqueOddDigits) {
+                            const remaining = removeElement([...numbers], oddDigit);
+                            const prefix = findSmallestNumber(remaining);
+                            const candidate = prefix + oddDigit;
+
+                            if (candidate.length !== numbers.length) continue;
+                            if (!allOriginalDigitsWereZero && candidate.length > 1 && candidate.startsWith('0')) continue;
+
+                            if (smallestResult === null || candidate < smallestResult) {
+                                smallestResult = candidate;
+                            }
+                        }
+                        return smallestResult;
+                    }
+
+                    case 'smallest-even': {
+                        let smallestResult = null;
+                        const uniqueEvenDigits = [...new Set(numbers.filter(n => n % 2 === 0))];
+                        if (uniqueEvenDigits.length === 0) return null;
+
+                        for (const evenDigit of uniqueEvenDigits) {
+                            const remaining = removeElement([...numbers], evenDigit);
+                            const prefix = findSmallestNumber(remaining);
+                            const candidate = prefix + evenDigit;
+                            
+                            if (candidate.length !== numbers.length) continue;
+                            if (!allOriginalDigitsWereZero && candidate.length > 1 && candidate.startsWith('0')) continue;
+
+                            if (smallestResult === null || candidate < smallestResult) {
+                                smallestResult = candidate;
+                            }
+                        }
+                        return smallestResult;
+                    }
+                    case 'largest-even': {
+                        let largestResult = null;
+                        const uniqueEvenDigits = [...new Set(numbers.filter(n => n % 2 === 0))];
+                        if (uniqueEvenDigits.length === 0) return null;
+
+                        for (const evenDigit of uniqueEvenDigits) {
+                            const remaining = removeElement([...numbers], evenDigit);
+                            const prefix = findLargestNumber(remaining);
+                            const candidate = prefix + evenDigit;
+                            
+                            if (candidate.length !== numbers.length) continue;
+                            if (!allOriginalDigitsWereZero && candidate.length > 1 && candidate.startsWith('0')) continue;
+
+                            if (largestResult === null || candidate > largestResult) {
+                                largestResult = candidate;
+                            }
+                        }
+                        return largestResult;
+                    }
+
+                    default:
+                        return '';
+                }
+            }
+
+            function revealMemoryCards() {
+                const allRenderedCards = document.querySelectorAll('#game-area .card.flipped');
+                allRenderedCards.forEach(card => {
+                    if(card.dataset.value) {
+                         card.textContent = card.dataset.value;
+                         card.classList.remove('flipped');
+                    }
+                });
+            }
+
+            function checkAnswer() {
+                if (currentSpecialRoundType === 'memory') {
+                    revealMemoryCards();
+                }
+
+                const subMode = isBattleModeActive ? battleQuestions[currentRound - 1].subMode : currentMode;
+                const dropAreaId = subMode === 'mode1' ? 'card-area' : 'card-drop-area';
+                const dropArea = document.getElementById(dropAreaId);
+                const userCards = Array.from(dropArea.children).filter(el => el.classList.contains('card'));
+
+                if (userCards.length !== CARD_COUNT) {
+                    showMessage(getTranslation('message_not_enough_cards', { count: CARD_COUNT })); return;
+                }
+                
+                const isMemory = currentSpecialRoundType === 'memory';
+                const userAnswer = userCards.map(card => isMemory ? card.dataset.value : card.textContent).join('');
+                let score = 0;
+                const timeSpent = initialTime - timerInSeconds;
+
+                if (userAnswer === correctNumber) {
+                    stopTimer();
+                    
+                    if (isBattleModeActive) {
+                        comboCounter++;
+                         if (comboCounter >= 2) {
+                            playSound(soundCombo[Math.min(comboCounter - 2, soundCombo.length - 1)]);
+                        } else {
+                            playSound(soundCorrect);
+                        }
+
+                        let comboMultiplier = 1;
+                        if (comboCounter >= 5) comboMultiplier = 2;
+                        else if (comboCounter >= 3) comboMultiplier = 1.5;
+                        else if (comboCounter >= 2) comboMultiplier = 1.2;
+
+                        score = Math.round((100 + timerInSeconds * 10) * comboMultiplier);
+
+                        if (currentSpecialRoundType === 'lightning') score *= 2;
+                        if (currentSpecialRoundType === 'bonus') score += 500;
+                        battleTotalScore += score;
+                        scoreDisplay.textContent = battleTotalScore;
+                        recordBattleResult(userAnswer, true, timeSpent, score);
+                    } else {
+                        playSound(soundCorrect);
+                    }
+
+                    updateComboDisplay();
+                    const message = isBattleModeActive ? getTranslation('message_correct_score', { score: score }) : getTranslation('message_correct');
+                    showMessage(message, 'success', isBattleModeActive ? 2000 : null);
+                    checkButton.disabled = true;
+
+                    if (isBattleModeActive && comboCounter >= 5) {
+                        confetti({ particleCount: 300, spread: 150, origin: { y: 0.6 }, zIndex: 3000, colors: ['#ffc700', '#ff9a00', '#ff5a00', '#ff0000'] });
+                    } else {
+                        confetti({ particleCount: 150, spread: 90, origin: { y: 0.6 }, zIndex: 3000 });
+                    }
+                    if(isBattleModeActive) { setTimeout(nextBattleRound, 2000); }
+                } else {
+                    mainContainer.classList.add('shake-animation');
+                    setTimeout(() => mainContainer.classList.remove('shake-animation'), 400);
+                    wrongAttempts++; 
+                    playSound(soundIncorrect);
+
+                    if (isBattleModeActive) {
+                        comboCounter = 0;
+                        updateComboDisplay();
+                        stopTimer();
+                        recordBattleResult(userAnswer, false, timeSpent, 0);
+                        showMessage(getTranslation('message_incorrect_positive'), 'error', 2000, {icon: '🦉', animation: 'peek-animation'});
+                        checkButton.disabled = true;
+                        setTimeout(nextBattleRound, 2000);
+                    } else if (wrongAttempts >= 3) {
+                        stopTimer();
+                        showMessage(getTranslation('message_incorrect_limit', { answer: correctNumber }), 'error', null);
+                        checkButton.disabled = true;
+                    } else {
+                        showMessage(getTranslation('message_incorrect_attempts'), 'error', null);
+                    }
+                }
+            }
+
+            function addDragDropListeners(dropArea, sourceArea = null) {
+                let draggedItem = null;
+                if (touchMoveHandler) document.removeEventListener('touchmove', touchMoveHandler);
+                if (touchEndHandler) document.removeEventListener('touchend', touchEndHandler);
+
+                function getDragAfterElement(container, x) {
+                    const draggableElements = [...container.querySelectorAll('.card:not(.dragged)')];
+                    return draggableElements.reduce((closest, child) => {
+                        const box = child.getBoundingClientRect(); const offset = x - box.left - box.width / 2;
+                        if (offset < 0 && offset > closest.offset) { return { offset: offset, element: child }; } 
+                        else { return closest; }
+                    }, { offset: Number.NEGATIVE_INFINITY }).element;
+                }
+                const dragStart = (e) => { draggedItem = e.target; playSound(soundSwoosh); setTimeout(() => e.target.classList.add('dragged'), 0); };
+                const dragOver = (e) => e.preventDefault();
+                const dragEnd = () => { if(draggedItem) draggedItem.classList.remove('dragged'); draggedItem = null; };
+                const drop = (e) => {
+                    e.preventDefault(); if (!draggedItem) return;
+                    const dropContainer = e.target.closest('.card-container');
+                    if (!dropContainer || !(dropContainer === dropArea || dropContainer === sourceArea)) return;
+                    if (dropContainer.id === 'card-drop-area' && draggedItem.parentElement.id !== 'card-drop-area') {
+                        if (Array.from(dropContainer.children).filter(el => el.classList.contains('card')).length >= CARD_COUNT) return;
+                    }
+                    const afterElement = getDragAfterElement(dropContainer, e.clientX);
+                    if (afterElement == null) dropContainer.appendChild(draggedItem);
+                    else dropContainer.insertBefore(draggedItem, afterElement);
+                    playSound(soundDrop); createStarBurst(e.clientX, e.clientY);
+                    if ((currentMode === 'mode2' || isBattleModeActive || currentMode === 'mode4') && dropContainer.id === 'card-drop-area') {
+                        const placeholder = dropContainer.querySelector('p');
+                        if (placeholder) placeholder.style.display = Array.from(dropContainer.children).filter(el => el.classList.contains('card')).length > 0 ? 'none' : 'block';
+                    }
+                };
+                const touchStart = (e) => {
+                    draggedItem = e.target.closest('.card'); if (!draggedItem) return;
+                    playSound(soundSwoosh); draggedItem.classList.add('dragged');
+                };
+                touchMoveHandler = (e) => {
+                    if (!draggedItem) return; e.preventDefault();
+                    const touch = e.touches[0]; const offsetY = draggedItem.offsetHeight * 0.7;
+                    Object.assign(draggedItem.style, {
+                        position: 'fixed', zIndex: '1000',
+                        left: `${touch.clientX - draggedItem.offsetWidth / 2}px`,
+                        top: `${touch.clientY - offsetY}px`
+                    });
+                };
+                touchEndHandler = (e) => {
+                    if (!draggedItem) return;
+                    draggedItem.style.visibility = 'hidden';
+                    const touch = e.changedTouches[0];
+                    const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+                    draggedItem.style.visibility = 'visible';
+                    Object.assign(draggedItem.style, { position: '', zIndex: '', left: '', top: '' });
+                    let dropContainer = elementUnderTouch ? elementUnderTouch.closest('.card-container') : null;
+                    if (!dropContainer) {
+                        const dropAreaRect = dropArea.getBoundingClientRect();
+                        const sourceAreaRect = sourceArea ? sourceArea.getBoundingClientRect() : null;
+                        if (touch.clientX >= dropAreaRect.left && touch.clientX <= dropAreaRect.right &&
+                            touch.clientY >= dropAreaRect.top && touch.clientY <= dropAreaRect.bottom) { dropContainer = dropArea; } 
+                        else if (sourceAreaRect && touch.clientX >= sourceAreaRect.left && touch.clientX <= sourceAreaRect.right &&
+                            touch.clientY >= sourceAreaRect.top && touch.clientY <= sourceAreaRect.bottom) { dropContainer = sourceArea; }
+                    }
+                    if (dropContainer && (dropContainer === dropArea || dropContainer === sourceArea)) {
+                        playSound(soundDrop); createStarBurst(touch.clientX, touch.clientY);
+                        if (dropContainer.id === 'card-drop-area' && draggedItem.parentElement.id !== 'card-drop-area') {
+                             if (Array.from(dropContainer.children).filter(el => el.classList.contains('card')).length >= CARD_COUNT) { sourceArea.appendChild(draggedItem); } 
+                             else {
+                                const afterElement = getDragAfterElement(dropContainer, touch.clientX);
+                                if (afterElement == null) dropContainer.appendChild(draggedItem);
+                                else dropContainer.insertBefore(draggedItem, afterElement);
+                             }
+                        } else {
+                             const afterElement = getDragAfterElement(dropContainer, touch.clientX);
+                             if (afterElement == null) dropContainer.appendChild(draggedItem);
+                             else dropContainer.insertBefore(draggedItem, afterElement);
+                        }
+                    } else if (sourceArea) { sourceArea.appendChild(draggedItem); }
+                    if ((currentMode === 'mode2' || isBattleModeActive || currentMode === 'mode4') && (dropContainer && dropContainer.id === 'card-drop-area')) {
+                        const placeholder = dropContainer.querySelector('p');
+                        if (placeholder) placeholder.style.display = Array.from(dropContainer.children).filter(el => el.classList.contains('card')).length > 0 ? 'none' : 'block';
+                    }
+                    draggedItem.classList.remove('dragged'); draggedItem = null;
+                };
+
+                document.querySelectorAll('.card').forEach(card => {
+                    card.addEventListener('dragstart', dragStart); card.addEventListener('dragend', dragEnd);
+                    card.addEventListener('touchstart', touchStart, { passive: true });
+                });
+                document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+                document.addEventListener('touchend', touchEndHandler);
+                [dropArea, sourceArea].forEach(area => {
+                    if (area) { area.addEventListener('dragover', dragOver); area.addEventListener('drop', drop); }
+                });
+            }
+             
+            // *** 教學模式相關函式 ***
+            function initTeachingMode() {
+                stopTimer();
+                isBattleModeActive = false;
+                gameObjective.innerHTML = getTranslation('objective_mode4_welcome');
+                gameArea.innerHTML = '';
+                manualCards = [];
+                updateManualCardsDisplay();
+                updateUIVisibility();
+            }
+
+            function setupTeacherControls() {
+                // Populate digit buttons
+                for (let i = 0; i < 10; i++) {
+                    const btn = document.createElement('button');
+                    btn.textContent = i;
+                    btn.className = 'w-12 h-12 bg-white rounded-lg shadow font-bold text-xl hover:bg-gray-200 transition';
+                    btn.addEventListener('click', () => {
+                        const limit = teacherMode === 'mode1' ? 9 : 11;
+                        if (manualCards.length < limit) {
+                            manualCards.push(i);
+                            updateManualCardsDisplay();
+                        }
+                    });
+                    digitButtonsContainer.appendChild(btn);
+                }
+                
+                // Populate objective dropdown
+                dynamicObjectives.forEach(obj => {
+                    const option = document.createElement('option');
+                    option.value = obj.type;
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = getTranslation(obj.textKey, {count: ''});
+                    option.textContent = tempDiv.textContent.replace(/！|!/g, '').trim();
+                    teacherObjectiveType.appendChild(option);
+                });
+
+
+                clearManualCardsBtn.addEventListener('click', () => {
+                    manualCards = [];
+                    updateManualCardsDisplay();
+                });
+                
+                teacherMode1Btn.addEventListener('click', () => {
+                    teacherMode = 'mode1';
+                    teacherMode1Btn.classList.add('bg-blue-600', 'text-white');
+                    teacherMode1Btn.classList.remove('bg-white', 'text-gray-700');
+                    teacherMode2Btn.classList.add('bg-white', 'text-gray-700');
+                    teacherMode2Btn.classList.remove('bg-blue-600', 'text-white');
+                    manualCards = [];
+                    updateManualCardsDisplay();
+                    teacherDigitCountContainer.classList.add('hidden');
+                    document.getElementById('teacher-card-setup-label').textContent = getTranslation('teacher_card_setup_label', {min:3, max:9});
+
+                });
+
+                teacherMode2Btn.addEventListener('click', () => {
+                    teacherMode = 'mode2';
+                    teacherMode2Btn.classList.add('bg-blue-600', 'text-white');
+                    teacherMode2Btn.classList.remove('bg-white', 'text-gray-700');
+                    teacherMode1Btn.classList.add('bg-white', 'text-gray-700');
+                    teacherMode1Btn.classList.remove('bg-blue-600', 'text-white');
+                    manualCards = [];
+                    updateManualCardsDisplay();
+                    teacherDigitCountContainer.classList.remove('hidden');
+                    document.getElementById('teacher-card-setup-label').textContent = getTranslation('teacher_card_setup_label', {min:5, max:11});
+                });
+
+                manualCardsDisplay.addEventListener('DOMSubtreeModified', () => {
+                    if (teacherMode === 'mode2') {
+                        teacherDigitCountSelect.innerHTML = '';
+                        for(let i=3; i < manualCards.length; i++) {
+                            const option = document.createElement('option');
+                            option.value = i;
+                            option.textContent = i;
+                            teacherDigitCountSelect.appendChild(option);
+                        }
+                        if (manualCards.length >= 5) {
+                            teacherDigitCountSelect.value = manualCards.length - 2;
+                        }
+                    }
+                });
+                
+                generateQuestionBtn.addEventListener('click', generateTeacherQuestion);
+                showAnswerBtn.addEventListener('click', () => {
+                     if (correctNumber) {
+                        showMessage(`正確答案是: ${correctNumber}`, 'info', null);
+                        teacherShowAnswerContainer.classList.add('hidden');
+                    }
+                });
+            }
+
+            function updateManualCardsDisplay() {
+                manualCardsDisplay.innerHTML = '';
+                manualCards.forEach((num, index) => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'card shadow-md teacher-panel-card';
+                    cardElement.textContent = num;
+                    cardElement.style.backgroundColor = cardColors[index % cardColors.length];
+                    manualCardsDisplay.appendChild(cardElement);
+                });
+                 if (teacherMode === 'mode2') {
+                    teacherDigitCountSelect.innerHTML = '';
+                    for(let i=3; i < manualCards.length; i++) {
+                        const option = document.createElement('option');
+                        option.value = i;
+                        option.textContent = i;
+                        teacherDigitCountSelect.appendChild(option);
+                    }
+                    if (manualCards.length >= 5) {
+                        teacherDigitCountSelect.value = manualCards.length - 2;
+                    }
+                }
+            }
+            
+            function generateTeacherQuestion() {
+                messageContainer.classList.add('hidden');
+                
+                const isOptimalMode = teacherMode === 'mode2';
+                const minCards = isOptimalMode ? 5 : 3;
+                const maxCards = isOptimalMode ? 11 : 9;
+
+                if (manualCards.length < minCards || manualCards.length > maxCards) {
+                    alert(getTranslation('teacher_error_card_count', {min: minCards, max: maxCards}));
+                    return;
+                }
+                
+                currentObjective = teacherObjectiveType.value;
+                
+                if (isOptimalMode) {
+                    CARD_COUNT = parseInt(teacherDigitCountSelect.value, 10);
+                    CARD_SOURCE_COUNT = manualCards.length;
+                } else {
+                    CARD_COUNT = manualCards.length;
+                }
+
+                const text = getTranslation(dynamicObjectives.find(o => o.type === currentObjective).textKey, { count: CARD_COUNT });
+                gameObjective.innerHTML = isOptimalMode 
+                    ? getTranslation('objective_mode2_prefix', { sourceCount: CARD_SOURCE_COUNT, count: CARD_COUNT }) + text + getTranslation('objective_mode2_suffix')
+                    : getTranslation('objective_prefix') + text + '！';
+
+                cards = manualCards.map((num, i) => ({ value: num, color: cardColors[i % cardColors.length] }));
+                const cardValues = cards.map(c => c.value);
+
+                if (isOptimalMode) {
+                    const optimalSubset = findOptimalSubset(cardValues, CARD_COUNT, currentObjective);
+                    if (!optimalSubset) {
+                        showMessage(getTranslation('message_no_parity_number'), 'error');
+                        correctNumber = '';
+                        return;
+                    }
+                    correctNumber = calculateCorrectAnswer(optimalSubset, currentObjective);
+                } else {
+                    correctNumber = calculateCorrectAnswer(cardValues, currentObjective);
+                }
+                
+                if (!correctNumber) {
+                    showMessage(getTranslation('message_no_parity_number'), 'error');
+                    gameArea.innerHTML = '';
+                    showAnswerBtn.disabled = true;
+                    return;
+                }
+                
+                renderGameArea(teacherMode === 'mode1' ? 'mode1' : 'mode2');
+                if (teacherMode === 'mode1') {
+                    const dropArea = document.getElementById('card-area');
+                    renderCards(shuffle([...cards]), dropArea, 'mode1');
+                    addDragDropListeners(dropArea);
+                    adjustCardSize(CARD_COUNT);
+                } else { // mode2
+                    const dropArea = document.getElementById('card-drop-area');
+                    const sourceArea = document.getElementById('card-source-area');
+                    renderCards([], dropArea, 'mode2');
+                    renderCards(shuffle([...cards]), sourceArea, 'mode2');
+                    addDragDropListeners(dropArea, sourceArea);
+                    adjustCardSize(CARD_SOURCE_COUNT);
+                }
+                teacherShowAnswerContainer.classList.remove('hidden');
+                showAnswerBtn.disabled = false;
+            }
+
+            // 事件監聽器
+            checkButton.addEventListener('click', () => { playSound(soundClick); checkAnswer(); });
+            resetButton.addEventListener('click', () => { playSound(soundClick); initGame(); });
+            startBattleButton.addEventListener('click', () => { playSound(soundClick); startBattle(); });
+            settingsButton.addEventListener('click', () => { playSound(soundClick); settingsModal.classList.remove('hidden'); });
+            closeSettingsButton.addEventListener('click', () => {
+                playSound(soundClick); settingsModal.classList.add('hidden');
+                currentMode = modeSelect.value;
+                updateUIForLanguage();
+            });
+            languageSelect.addEventListener('change', (e) => { currentLanguage = e.target.value; updateUIForLanguage(); });
+            
+            modeSelect.addEventListener('change', (e) => {
+                currentMode = e.target.value;
+                updateNumberCountOptions(currentMode);
+                if (currentMode === 'mode3') {
+                    timeSelect.value = '30';
+                } else if (currentMode === 'mode4') {
+                    // No default time change needed for teaching mode
+                }
+                else {
+                    timeSelect.value = '60';
+                }
+                updateUIForLanguage();
+            });
+
+            soundToggle.addEventListener('change', (e) => {
+                soundEnabled = e.target.checked; localStorage.setItem('soundEnabled', soundEnabled);
+                if (soundEnabled) { initAudio(); }
+            });
+
+            // 初始化遊戲
+            const savedSoundPref = localStorage.getItem('soundEnabled');
+            if (savedSoundPref !== null) { soundEnabled = savedSoundPref === 'true'; soundToggle.checked = soundEnabled; } 
+            else { soundToggle.checked = soundEnabled; }
+            if (soundEnabled) { document.body.addEventListener('click', initAudio, { once: true }); document.body.addEventListener('touchstart', initAudio, { once: true }); }
+            
+            setupTeacherControls();
+            updateNumberCountOptions(currentMode);
+            modeSelect.value = currentMode;
+            updateUIForLanguage();
+        });
+    </script>
+</body>
+</html>
+
