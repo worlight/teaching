@@ -89,6 +89,8 @@
             background-color: #dbeafe;
             transform: scale(1.1);
         }
+        /* This class is no longer needed as we use display: none */
+        /*
         .char-bubble.selected {
             background-color: #fdba74;
             border-color: #f97316;
@@ -96,6 +98,7 @@
             opacity: 0.5;
             pointer-events: none;
         }
+        */
         #answer-slots-container {
             display: flex;
             justify-content: center;
@@ -319,14 +322,14 @@
         }
 
         function onCharClick(bubbleEl) {
-            if (bubbleEl.classList.contains('selected')) return;
+            if (bubbleEl.style.display === 'none') return;
 
             const firstEmptyIndex = userAnswer.indexOf(null);
             if (firstEmptyIndex === -1) return;
             
             const char = bubbleEl.textContent;
             userAnswer[firstEmptyIndex] = { char: char, el: bubbleEl };
-            bubbleEl.classList.add('selected');
+            bubbleEl.style.display = 'none'; // Hide the bubble
             updateAnswerSlots();
         }
 
@@ -334,7 +337,7 @@
             if (userAnswer[slotIndex]) {
                 const removedItem = userAnswer[slotIndex];
                 if (removedItem.el) {
-                    removedItem.el.classList.remove('selected');
+                    removedItem.el.style.display = 'flex'; // Show the bubble again
                 }
                 userAnswer[slotIndex] = null;
                 updateAnswerSlots();
@@ -368,7 +371,7 @@
 
         function clearAnswer() {
             userAnswer.forEach(item => {
-                if (item && item.el) item.el.classList.remove('selected');
+                if (item && item.el) item.el.style.display = 'flex';
             });
             userAnswer = new Array(4).fill(null);
             updateAnswerSlots();
@@ -404,9 +407,9 @@
                 onSlotClick(misplacedIndex);
             }
 
-            const correctBubbleEl = bubbles.find(b => !b.el.classList.contains('selected') && b.el.textContent === correctChar)?.el;
+            const correctBubbleEl = bubbles.find(b => b.el.style.display !== 'none' && b.el.textContent === correctChar)?.el;
             if (correctBubbleEl) {
-                correctBubbleEl.classList.add('selected');
+                correctBubbleEl.style.display = 'none';
                 userAnswer[indexToFix] = { char: correctChar, el: correctBubbleEl };
                 updateAnswerSlots();
             }
@@ -518,4 +521,5 @@
 
 </body>
 </html>
+
 
