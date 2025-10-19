@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 11 快捷鍵互動指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        .hotkey-key {
+            background-color: #e2e8f0; /* slate-200 */
+            color: #334155; /* slate-700 */
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-family: 'Inter', monospace;
+            font-weight: 600;
+            border-bottom: 2px solid #cbd5e1; /* slate-300 */
+            display: inline-block;
+            margin: 0 2px;
+            white-space: nowrap;
+        }
+        .dark .hotkey-key {
+            background-color: #475569; /* slate-600 */
+            color: #e2e8f0; /* slate-200 */
+            border-bottom: 2px solid #334155; /* slate-700 */
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-5xl">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-blue-600 dark:text-blue-400">Windows 11 快捷鍵互動指南</h1>
+            <p class="mt-2 text-slate-600 dark:text-slate-400">您的終極鍵盤快捷鍵助手，由學校IT部門提供。</p>
+        </header>
+
+        <!-- Search Input -->
+        <div class="sticky top-4 z-10 mb-8">
+            <div class="relative">
+                <input type="text" id="searchInput" placeholder="試著搜尋「複製」或「Win + D」..." class="w-full p-4 pl-12 text-lg border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl shadow-lg focus:ring-4 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all duration-300">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+        </div>
+        
+        <div id="no-results" class="hidden text-center py-12">
+             <p class="text-xl font-semibold text-slate-500 dark:text-slate-400">找不到相符的快捷鍵 😔</p>
+             <p class="text-slate-400 dark:text-slate-500 mt-2">請嘗試使用其他關鍵字。</p>
+        </div>
+
+        <main id="hotkeyList" class="space-y-10">
+            <!-- General Hotkeys -->
+            <section class="hotkey-category">
+                <h2 class="text-2xl font-bold mb-4 border-l-4 border-blue-500 pl-4">常用快捷鍵</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">C</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">複製選取的項目。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">X</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">剪下選取的項目。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">V</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">貼上複製或剪下的項目。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">Z</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">復原上一個動作。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">A</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">選取文件或視窗中的所有項目。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Alt</span> + <span class="hotkey-key">Tab</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">在開啟的應用程式之間切換。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">Alt</span> + <span class="hotkey-key">Del</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟工作管理員或安全性選項。</p>
+                    </div>
+                     <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">F5</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">重新整理作用中的視窗。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Windows Key Hotkeys -->
+            <section class="hotkey-category">
+                <h2 class="text-2xl font-bold mb-4 border-l-4 border-green-500 pl-4">Windows 鍵快捷鍵</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟或關閉 [開始] 功能表。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">A</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 [快速設定] 面板。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">C</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 Microsoft Teams Chat。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">D</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">顯示及隱藏桌面。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">E</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟檔案總管。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">G</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 Xbox Game Bar。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">H</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">啟動語音輸入。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">I</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 [設定]。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">K</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 [投射] 快速設定。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">L</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">鎖定您的電腦。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">M</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">將所有視窗最小化。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">N</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟通知中心與行事曆。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">R</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 [執行] 對話方塊。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">S</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 [搜尋]。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">V</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟剪貼簿歷程記錄。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">W</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 [小工具]。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">X</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 [快速連結] 功能表。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">Z</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟貼齊版面配置。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">Tab</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟工作檢視 (虛擬桌面)。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">D</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">新增虛擬桌面。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">左右方向鍵</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">在虛擬桌面之間切換。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">F4</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">關閉使用中的虛擬桌面。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">Shift</span> + <span class="hotkey-key">S</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟螢幕剪取工具。</p>
+                    </div>
+                     <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">.</span> (Period)</div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟 Emoji 面板。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Win</span> + <span class="hotkey-key">方向鍵</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">貼齊視窗 (上:最大化, 左/右:貼齊半邊, 下:最小化)。</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- File Explorer Hotkeys -->
+            <section class="hotkey-category">
+                <h2 class="text-2xl font-bold mb-4 border-l-4 border-orange-500 pl-4">檔案總管</h2>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">N</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟新視窗。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">T</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">開啟新索引標籤。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">W</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">關閉作用中的索引標籤。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Ctrl</span> + <span class="hotkey-key">Shift</span> + <span class="hotkey-key">N</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">建立新資料夾。</p>
+                    </div>
+                    <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">Alt</span> + <span class="hotkey-key">P</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">顯示/隱藏預覽窗格。</p>
+                    </div>
+                     <div class="hotkey-item p-4 bg-white dark:bg-slate-800/50 rounded-lg shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                        <div class="font-semibold text-lg mb-2"><span class="hotkey-key">F2</span></div>
+                        <p class="text-slate-600 dark:text-slate-400">重新命名選取的項目。</p>
+                    </div>
+                 </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 pt-6 border-t border-slate-300 dark:border-slate-700">
+            <p class="text-slate-500 dark:text-slate-400">&copy; 2025 學校IT部門 | 致力於提升您的數位體驗</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const hotkeyItems = document.querySelectorAll('.hotkey-item');
+            const categories = document.querySelectorAll('.hotkey-category');
+            const noResultsMessage = document.getElementById('no-results');
+
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim().replace(/\s/g, '');
+                let visibleItemsCount = 0;
+
+                categories.forEach(category => {
+                    let visibleInCategory = 0;
+                    const itemsInCategory = category.querySelectorAll('.hotkey-item');
+
+                    itemsInCategory.forEach(item => {
+                        const itemText = item.textContent.toLowerCase().replace(/\s/g, '');
+                        if (itemText.includes(searchTerm)) {
+                            item.style.display = 'block';
+                            visibleInCategory++;
+                            visibleItemsCount++;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+
+                    // Hide category title if no items in it are visible
+                    if (visibleInCategory === 0) {
+                        category.style.display = 'none';
+                    } else {
+                        category.style.display = 'block';
+                    }
+                });
+                
+                // Show or hide the "no results" message
+                if (visibleItemsCount === 0) {
+                    noResultsMessage.style.display = 'block';
+                } else {
+                    noResultsMessage.style.display = 'none';
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
+
+
+

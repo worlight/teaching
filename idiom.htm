@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文成語學習小天地 🧩 (響應式設計)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0f9ff;
+            overflow: hidden; /* Prevent confetti from causing scrollbars */
+        }
+        .card {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+        .btn {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        .feedback-correct {
+            color: #16a34a;
+            background-color: #dcfce7;
+            border-left: 5px solid #22c55e;
+        }
+        .feedback-incorrect {
+            color: #dc2626;
+            background-color: #fee2e2;
+            border-left: 5px solid #ef4444;
+        }
+        #word-pool-container {
+            position: relative;
+            background-color: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: default;
+            height: 160px; /* Mobile first height */
+        }
+        .answer-slot, .char-bubble {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            user-select: none;
+            /* Responsive sizes */
+            width: 48px;
+            height: 48px;
+            font-size: 24px;
+        }
+        .char-bubble {
+            position: absolute;
+            background-color: white;
+            border: 2px solid #93c5fd;
+            color: #1e3a8a;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+        }
+        .answer-slot {
+             background-color: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            font-weight: bold;
+            color: #1e3a8a;
+            transition: background-color 0.2s;
+        }
+
+        /* SM breakpoint and up */
+        @media (min-width: 640px) {
+            #word-pool-container {
+                height: 200px;
+            }
+            .answer-slot, .char-bubble {
+                width: 56px;
+                height: 56px;
+                font-size: 28px;
+            }
+        }
+
+        .char-bubble:hover {
+            background-color: #dbeafe;
+            transform: scale(1.1);
+        }
+        .char-bubble.selected {
+            background-color: #fdba74;
+            border-color: #f97316;
+            color: #7c2d12;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        #answer-slots-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .answer-slot.filled {
+            cursor: pointer;
+            background-color: #e0f2fe;
+        }
+        .answer-slot.filled:hover {
+            background-color: #bae6fd;
+        }
+
+        #confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 20;
+        }
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+            animation: confetti-fall 3s ease-out forwards;
+        }
+
+        @keyframes confetti-fall {
+            0% { opacity: 1; transform: translate(var(--x), var(--y)) rotate(0deg) scale(1); }
+            100% { opacity: 0; transform: translate(var(--x-end), var(--y-end)) rotate(720deg) scale(0.5); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-2 sm:p-4">
+
+    <div id="confetti-container"></div>
+
+    <div id="app" class="card w-full max-w-2xl p-4 sm:p-6 md:p-8 text-center">
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-sky-800 mb-2">中文成語學習小天地 🧩</h1>
+        <p class="text-gray-500 mb-6 text-sm sm:text-base">點選漂浮的文字，拼出正確的成語！</p>
+
+        <div class="absolute top-2 right-2 sm:top-4 sm:right-4 bg-sky-100 text-sky-700 font-semibold px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
+            <span id="score">分數: 0</span>
+        </div>
+
+        <div id="emoji-display" class="text-5xl sm:text-6xl md:text-7xl mb-6 p-4 bg-sky-50 rounded-lg select-none"></div>
+
+        <div id="answer-slots-container">
+            <div class="answer-slot"></div>
+            <div class="answer-slot"></div>
+            <div class="answer-slot"></div>
+            <div class="answer-slot"></div>
+        </div>
+        
+        <div id="hint-display" class="mt-4 mb-4 p-3 rounded-lg text-left text-sm sm:text-base hidden bg-amber-100 text-amber-800 border-l-4 border-amber-500"></div>
+
+        <div id="word-pool-container" class="mb-4"></div>
+
+        <div id="buttons-container" class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <button id="hint-btn" class="btn w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-base">提示</button>
+            <button id="reveal-char-btn" class="btn w-full bg-teal-500 hover:bg-teal-600 text-white font-bold px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-base">顯示一字</button>
+            <button id="clear-btn" class="btn w-full bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-base">清除</button>
+            <button id="check-btn" class="btn w-full bg-sky-500 hover:bg-sky-600 text-white font-bold px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-base">確定</button>
+        </div>
+        <button id="next-btn" class="btn w-full mt-4 bg-gray-700 hover:bg-gray-800 text-white font-bold px-8 py-3 rounded-lg text-lg hidden">下一題 →</button>
+        
+        <div id="feedback" class="mt-6 p-4 rounded-lg text-left text-sm sm:text-base hidden"></div>
+    </div>
+
+    <script>
+        const idioms = [
+            // 原有的 10 個
+            { idiom: "畫蛇添足", emojis: "🎨🐍➕🦶", meaning: "比喻多此一舉，不但無益，反而有害。", example: "這篇文章已經很完整了，再加這一段簡直是畫蛇添足。" },
+            { idiom: "井底之蛙", emojis: "🕳️⬇️🐸", meaning: "比喻見識淺薄，眼光狹隘的人。", example: "我們要多看世界，才不會成為井底之蛙。" },
+            { idiom: "對牛彈琴", emojis: "👉🐂🎶🎹", meaning: "比喻對不懂道理的人講道理，或講話不看對象。", example: "跟他這種人講道理，簡直是對牛彈琴。" },
+            { idiom: "亡羊補牢", emojis: "🏃‍♂️🐑🔧🏠", meaning: "比喻出了問題以後想辦法補救，可以防止繼續損失。", example: "雖然這次考試失敗了，但只要現在開始努力，亡羊補牢，還為時不晚。" },
+            { idiom: "狐假虎威", emojis: "🦊🤥🐅💪", meaning: "比喻倚仗別人的勢力來欺壓人。", example: "他只是老闆的司機，卻狐假虎威，到處指手畫腳。" },
+            { idiom: "一箭雙鵰", emojis: "🏹🎯🦅🦅", meaning: "比喻做一件事情，同時達到兩個目的。", example: "這次出差順便探望了老朋友，真是一箭雙鵰。" },
+            { idiom: "胸有成竹", emojis: "👨‍🎨❤️🎋", meaning: "比喻事前已有了全面的考慮和安排，因此顯得很有把握。", example: "看他那胸有成竹的樣子，這次比賽肯定贏定了。" },
+            { idiom: "守株待兔", emojis: "🌳🐰😴", meaning: "比喻不知變通，死守狹隘的經驗，或比喻妄想不勞而獲。", example: "只想靠運氣成功，無異於守株待兔。" },
+            { idiom: "盲人摸象", emojis: "👨‍🦯🐘❓", meaning: "比喻看問題片面，以偏概全。", example: "我們在分析問題時要全面，不能盲人摸象。" },
+            { idiom: "杯弓蛇影", emojis: "🍵🏹🐍👥", meaning: "比喻因疑神疑鬼而引起恐懼。", example: "別杯弓蛇影了，那只是窗外的樹枝在晃動。" },
+            // 新增的 40 個
+            { idiom: "畫龍點睛", emojis: "🎨🐉👁️✨", meaning: "比喻在關鍵之處加上一筆，使內容更加生動有力。", example: "這段結尾真是畫龍點睛，讓整篇文章的主題都昇華了。" },
+            { idiom: "掩耳盜鈴", emojis: "🙉👂훔🔔", meaning: "比喻自己欺騙自己，試圖隱瞞明顯的事實。", example: "明明是他打破了花瓶，卻假裝不知道，真是掩耳盜鈴。" },
+            { idiom: "自相矛盾", emojis: "🗣️🛡️⚔️", meaning: "比喻言行前後不一致或互相抵觸。", example: "你剛才說不喜歡他，現在又約他出去，豈不是自相矛盾？" },
+            { idiom: "愚公移山", emojis: "👴⛰️⛏️💪", meaning: "比喻只要有恆心，堅持不懈，就能完成艱鉅的任務。", example: "學好外語需要愚公移山的精神。" },
+            { idiom: "塞翁失馬", emojis: "👴🐎🤷‍♂️🎉", meaning: "比喻壞事在一定條件下可以變成好事，好事也可能變成壞事。", example: "他錯過了班機，卻因此躲過一場意外，真是塞翁失馬，焉知非福。" },
+            { idiom: "拔苗助長", emojis: "👨‍🌾🌱⬆️😫", meaning: "比喻違反事物發展的客觀規律，急於求成，反而把事情弄糟。", example: "給孩子報太多才藝班，是拔苗助長的行為。" },
+            { idiom: "刻舟求劍", emojis: "⛵️🔪💧⚔️", meaning: "比喻辦事拘泥，不知變通。", example: "時代已經變了，你還用老方法，這無異於刻舟求劍。" },
+            { idiom: "水中撈月", emojis: "💧🌕🤲💨", meaning: "比喻做根本做不到的事情，白費力氣。", example: "想不努力就成功，簡直是水中撈月。" },
+            { idiom: "驚弓之鳥", emojis: "🏹🐦😱", meaning: "比喻受過驚嚇的人，遇到一點動靜就非常害怕。", example: "上次被騙後，他成了驚弓之鳥，不再輕易相信任何人。" },
+            { idiom: "杞人憂天", emojis: "🤔😟💥🌏", meaning: "比喻不必要的或毫無根據的憂慮。", example: "別擔心了，你的那些煩惱都是杞人憂天。" },
+            { idiom: "一鳴驚人", emojis: "🐦🤫➡️🎶🤯", meaning: "比喻平時沒有突出的表現，一下子做出驚人的成績。", example: "他在這次比賽中一鳴驚人，奪得了冠軍。" },
+            { idiom: "九牛一毛", emojis: "🐮🐮...🤏", meaning: "比喻極大數量中的極小部分，微不足道。", example: "這點錢對他來說，只是九牛一毛。" },
+            { idiom: "指鹿為馬", emojis: "👉🦌🗣️🐎", meaning: "比喻故意顛倒黑白，混淆是非。", example: "他竟然在法庭上指鹿為馬，真是膽大妄為。" },
+            { idiom: "狼狽為奸", emojis: "🐺🤝😈", meaning: "比喻壞人互相勾結，一起做壞事。", example: "這兩個貪官狼狽為奸，私吞了大量公款。" },
+            { idiom: "草木皆兵", emojis: "🌿🌳💂‍♂️💂‍♂️", meaning: "形容人在極度驚恐時，疑神疑鬼的心理狀態。", example: "逃犯躲在山裡，風吹草動都讓他草木皆兵。" },
+            { idiom: "雞鳴狗盜", emojis: "🐓🗣️🐕‍🦺훔", meaning: "指微不足道的技能，也泛指偷偷摸摸的行為。", example: "他只會些雞鳴狗盜的伎倆，上不了大場面。" },
+            { idiom: "門庭若市", emojis: "🚪👨‍👩‍👧‍👦🛒", meaning: "形容來的人很多，非常熱鬧。", example: "這家新開的餐廳，每天都門庭若市。" },
+            { idiom: "夜郎自大", emojis: "🤴🗣️🌏🤏", meaning: "比喻孤陋寡聞而又妄自尊大。", example: "我們應該謙虛學習，不能像夜郎自大一樣。" },
+            { idiom: "樂不思蜀", emojis: "😄🎉🤔🏠", meaning: "比喻在新環境中得到樂趣，不想再回到原來的地方。", example: "他在國外生活得很開心，已經樂不思蜀了。" },
+            { idiom: "紙上談兵", emojis: "📜🗣️⚔️", meaning: "比喻空談理論，不能解決實際問題。", example: "計畫再好，不去執行也只是紙上談兵。" },
+            { idiom: "四面楚歌", emojis: " चारों ओर से दुश्मन से घिरा हुआ ", meaning: "比喻四面受敵，孤立無援的困境。", example: "公司經營不善，如今已是四面楚歌，瀕臨破產。" },
+            { idiom: "破釜沉舟", emojis: "💥🍳🚢⬇️", meaning: "比喻下定決心，不留退路，奮戰到底。", example: "這次我們必須抱著破釜沉舟的決心，才能贏得勝利。" },
+            { idiom: "臥薪嘗膽", emojis: "🛌🪵😋🤢", meaning: "形容人刻苦自勵，發奮圖強。", example: "他經歷失敗後，臥薪嘗膽，終於東山再起。" },
+            { idiom: "聞雞起舞", emojis: "🐓🎶💃🕺", meaning: "比喻有志之士及時奮發。", example: "為了理想，他每天聞雞起舞，勤奮學習。" },
+            { idiom: "螳臂擋車", emojis: "🦗💪🚗", meaning: "比喻不自量力，做力不能及的事情。", example: "他一個人想對抗大公司，簡直是螳臂擋車。" },
+            { idiom: "唇亡齒寒", emojis: "👄 GONE, 🦷🥶", meaning: "比喻關係密切，利害相關。一方受損，另一方也必然受損。", example: "這兩家公司唇亡齒寒，必須合作才能共度難關。" },
+            { idiom: "飲鴆止渴", emojis: "🍷☠️😩", meaning: "比喻用錯誤的方法來解決眼前的困難，而不顧後果。", example: "靠借高利貸來周轉，無異於飲鴆止渴。" },
+            { idiom: "朝三暮四", emojis: "🐒☀️3️⃣🌙4️⃣", meaning: "比喻常常變卦，反覆無常。", example: "他這個人做事總是朝三暮四，讓人無法信任。" },
+            { idiom: "望梅止渴", emojis: "👀🍑🤤", meaning: "比喻用空想來安慰自己。", example: "看著旅遊雜誌，幻想自己去旅行，不過是望梅止渴罷了。" },
+            { idiom: "熟能生巧", emojis: "👌🔄💯", meaning: "形容任何技能，只要多練習，就能變得熟練巧妙。", example: "彈鋼琴沒有捷徑，唯有熟能生巧。" },
+            { idiom: "滴水穿石", emojis: "💧➡️🪨", meaning: "比喻只要有恆心，力量雖小也能做出大事。", example: "只要堅持下去，我相信滴水穿石，一定能成功。" },
+            { idiom: "半途而廢", emojis: "🏃‍♂️➡️🛑", meaning: "比喻事情做到一半就停止，沒有堅持到底。", example: "做事要有始有終，不能半途而廢。" },
+            { idiom: "鵬程萬里", emojis: "🦅✈️🌅", meaning: "比喻前途遠大，不可限量。", example: "祝福畢業的學長們鵬程萬里，一帆風順。" },
+            { idiom: "得意忘形", emojis: "😄🏆🤪", meaning: "形容人因高興而失去常態。", example: "他只是得了一點小獎，就得意忘形了。" },
+            { idiom: "千鈞一髮", emojis: "🏋️‍♂️⬇️👱‍♀️", meaning: "比喻情況非常危急。", example: "在千鈞一髮之際，消防員救出了被困的孩子。" },
+            { idiom: "同舟共濟", emojis: "🛶🤝⛈️", meaning: "比喻在困難時，大家同心協力，共渡難關。", example: "面對這次危機，全體員工必須同舟共濟。" },
+            { idiom: "按圖索驥", emojis: "🗺️🧐🐎", meaning: "比喻按照線索尋找，也比喻辦事機械、死板。", example: "警察根據線索按圖索驥，很快就找到了嫌疑犯。" },
+            { idiom: "不恥下問", emojis: "🤔👨‍🏫❓", meaning: "不以向地位、學問比自己低的人請教為恥。", example: "他雖然是專家，但仍能不恥下問，虛心學習。" },
+            { idiom: "三顧茅廬", emojis: "🤴➡️🛖x3", meaning: "比喻真心誠意地邀請賢才。", example: "為了請他出山，校長三顧茅廬，誠意十足。" },
+            { idiom: "金玉其外", emojis: "💰💎겉, 🥀 속", meaning: "形容外表華美，而实质不好。", example: "這產品包裝精美，卻是金玉其外，敗絮其中。" }
+        ];
+
+        let currentIdiomIndex = -1;
+        let score = 0;
+        let usedIndices = new Set();
+        let userAnswer = new Array(4).fill(null);
+        let bubbles = [];
+        let animationFrameId;
+        let bubbleSize = 56; // Default size, will be updated dynamically
+
+        const emojiDisplay = document.getElementById('emoji-display');
+        const wordPoolContainer = document.getElementById('word-pool-container');
+        const answerSlots = document.querySelectorAll('.answer-slot');
+        const nextBtn = document.getElementById('next-btn');
+        const checkBtn = document.getElementById('check-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const revealCharBtn = document.getElementById('reveal-char-btn');
+        const feedback = document.getElementById('feedback');
+        const scoreDisplay = document.getElementById('score');
+        const hintDisplay = document.getElementById('hint-display');
+        const buttonsContainer = document.getElementById('buttons-container');
+        const confettiContainer = document.getElementById('confetti-container');
+
+        const DISTRACTOR_CHARS = "的一是在不了有和人這中大為上個國我以要他時來用們生到作地于出就分";
+        const CONFETTI_COLORS = ['#ffeb3b', '#4caf50', '#2196f3', '#f44336', '#9c27b0'];
+
+        function generateChars(correctIdiom) {
+            const correctChars = correctIdiom.split('');
+            let allChars = new Set(correctChars);
+            while (allChars.size < 12) {
+                const randomIndex = Math.floor(Math.random() * DISTRACTOR_CHARS.length);
+                allChars.add(DISTRACTOR_CHARS[randomIndex]);
+            }
+            return Array.from(allChars).sort(() => Math.random() - 0.5);
+        }
+        
+        function loadNewIdiom() {
+            if (usedIndices.size === idioms.length) {
+                alert("恭喜！您已完成所有成語！將重新開始。");
+                usedIndices.clear();
+                score = 0;
+                scoreDisplay.textContent = `分數: ${score}`;
+            }
+            
+            do {
+                currentIdiomIndex = Math.floor(Math.random() * idioms.length);
+            } while (usedIndices.has(currentIdiomIndex));
+            
+            usedIndices.add(currentIdiomIndex);
+
+            const idiomData = idioms[currentIdiomIndex];
+            emojiDisplay.textContent = idiomData.emojis;
+
+            resetUI();
+
+            const chars = generateChars(idiomData.idiom);
+            wordPoolContainer.innerHTML = '';
+            bubbles = [];
+            const containerRect = wordPoolContainer.getBoundingClientRect();
+
+            chars.forEach(char => {
+                const bubbleEl = document.createElement('div');
+                bubbleEl.className = 'char-bubble';
+                bubbleEl.textContent = char;
+                bubbleEl.addEventListener('click', () => onCharClick(bubbleEl));
+                wordPoolContainer.appendChild(bubbleEl);
+                
+                bubbles.push({
+                    el: bubbleEl,
+                    x: Math.random() * (containerRect.width - bubbleEl.offsetWidth),
+                    y: Math.random() * (containerRect.height - bubbleEl.offsetHeight),
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 1.5
+                });
+            });
+            
+            if (bubbles.length > 0) {
+                bubbleSize = bubbles[0].el.offsetWidth;
+            }
+
+            startAnimation();
+        }
+
+        function onCharClick(bubbleEl) {
+            if (bubbleEl.classList.contains('selected')) return;
+
+            const firstEmptyIndex = userAnswer.indexOf(null);
+            if (firstEmptyIndex === -1) return;
+            
+            const char = bubbleEl.textContent;
+            userAnswer[firstEmptyIndex] = { char: char, el: bubbleEl };
+            bubbleEl.classList.add('selected');
+            updateAnswerSlots();
+        }
+
+        function onSlotClick(slotIndex) {
+            if (userAnswer[slotIndex]) {
+                const removedItem = userAnswer[slotIndex];
+                if (removedItem.el) {
+                    removedItem.el.classList.remove('selected');
+                }
+                userAnswer[slotIndex] = null;
+                updateAnswerSlots();
+            }
+        }
+
+        function updateAnswerSlots() {
+            answerSlots.forEach((slot, index) => {
+                const item = userAnswer[index];
+                if (item) {
+                    slot.textContent = item.char;
+                    slot.classList.add('filled');
+                } else {
+                    slot.textContent = '';
+                    slot.classList.remove('filled');
+                }
+                slot.classList.remove('shake');
+            });
+        }
+
+        function resetUI() {
+            userAnswer = new Array(4).fill(null);
+            updateAnswerSlots();
+            feedback.classList.add('hidden');
+            hintDisplay.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+            buttonsContainer.classList.remove('hidden');
+            wordPoolContainer.style.pointerEvents = 'auto';
+            revealCharBtn.disabled = false;
+        }
+
+        function clearAnswer() {
+            userAnswer.forEach(item => {
+                if (item && item.el) item.el.classList.remove('selected');
+            });
+            userAnswer = new Array(4).fill(null);
+            updateAnswerSlots();
+        }
+
+        function showHint() {
+            const idiomData = idioms[currentIdiomIndex];
+            hintDisplay.textContent = `提示：${idiomData.meaning}`;
+            hintDisplay.classList.remove('hidden');
+        }
+
+        function revealOneCharacter() {
+            const correctIdiom = idioms[currentIdiomIndex].idiom;
+            const incorrectOrEmptyIndices = [];
+            
+            for (let i = 0; i < 4; i++) {
+                if (!userAnswer[i] || userAnswer[i].char !== correctIdiom[i]) {
+                    incorrectOrEmptyIndices.push(i);
+                }
+            }
+
+            if (incorrectOrEmptyIndices.length === 0) return;
+
+            const indexToFix = incorrectOrEmptyIndices[Math.floor(Math.random() * incorrectOrEmptyIndices.length)];
+            const correctChar = correctIdiom[indexToFix];
+
+            if (userAnswer[indexToFix]) {
+                onSlotClick(indexToFix);
+            }
+            
+            const misplacedIndex = userAnswer.findIndex(item => item && item.char === correctChar);
+            if (misplacedIndex !== -1) {
+                onSlotClick(misplacedIndex);
+            }
+
+            const correctBubbleEl = bubbles.find(b => !b.el.classList.contains('selected') && b.el.textContent === correctChar)?.el;
+            if (correctBubbleEl) {
+                correctBubbleEl.classList.add('selected');
+                userAnswer[indexToFix] = { char: correctChar, el: correctBubbleEl };
+                updateAnswerSlots();
+            }
+            revealCharBtn.disabled = true;
+        }
+
+        function triggerConfetti() {
+            const numConfetti = 50;
+            for (let i = 0; i < numConfetti; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti-piece';
+                confetti.style.backgroundColor = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+                
+                const startX = window.innerWidth / 2;
+                const startY = window.innerHeight / 2;
+                const endX = startX + (Math.random() - 0.5) * window.innerWidth * 1.5;
+                const endY = startY + Math.random() * window.innerHeight * 0.8;
+
+                confetti.style.setProperty('--x', `${startX - 5}px`);
+                confetti.style.setProperty('--y', `${startY - 5}px`);
+                confetti.style.setProperty('--x-end', `${endX}px`);
+                confetti.style.setProperty('--y-end', `${endY}px`);
+
+                confettiContainer.appendChild(confetti);
+                confetti.addEventListener('animationend', () => confetti.remove());
+            }
+        }
+
+        function triggerShakeAnimation() {
+            answerSlots.forEach(slot => {
+                if (slot.classList.contains('filled')) {
+                    slot.classList.add('shake');
+                    slot.addEventListener('animationend', () => slot.classList.remove('shake'), { once: true });
+                }
+            });
+        }
+
+        function checkAnswer() {
+            if (userAnswer.some(item => item === null)) {
+                alert('請填滿四個字！');
+                return;
+            }
+            
+            stopAnimation();
+            const submittedAnswer = userAnswer.map(item => item.char).join('');
+            const correctIdiom = idioms[currentIdiomIndex];
+            
+            feedback.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+            buttonsContainer.classList.add('hidden');
+            wordPoolContainer.style.pointerEvents = 'none';
+
+            if (submittedAnswer === correctIdiom.idiom) {
+                feedback.innerHTML = `<h3 class="font-bold text-lg mb-2">🎉 答對了！就是「${correctIdiom.idiom}」</h3><p class="mt-2"><strong>解釋：</strong>${correctIdiom.meaning}</p><p class="mt-2"><strong>例子：</strong>${correctIdiom.example}</p>`;
+                feedback.className = 'mt-6 p-4 rounded-lg text-left text-sm sm:text-base feedback-correct';
+                score++;
+                scoreDisplay.textContent = `分數: ${score}`;
+                triggerConfetti();
+            } else {
+                feedback.innerHTML = `<h3 class="font-bold text-lg mb-2">🤔 差一點點！</h3><p class="mt-2"><strong>正確答案是：</strong>「${correctIdiom.idiom}」</p><p class="mt-2"><strong>解釋：</strong>${correctIdiom.meaning}</p><p class="mt-2"><strong>例子：</strong>${correctIdiom.example}</p>`;
+                feedback.className = 'mt-6 p-4 rounded-lg text-left text-sm sm:text-base feedback-incorrect';
+                triggerShakeAnimation();
+            }
+        }
+        
+        function animate() {
+            if(!wordPoolContainer) return;
+            const containerRect = wordPoolContainer.getBoundingClientRect();
+            if(containerRect.width === 0) {
+                 animationFrameId = requestAnimationFrame(animate);
+                 return;
+            }
+            bubbles.forEach(b => {
+                b.x += b.vx;
+                b.y += b.vy;
+
+                if (b.x <= 0 || b.x >= containerRect.width - bubbleSize) b.vx *= -1;
+                if (b.y <= 0 || b.y >= containerRect.height - bubbleSize) b.vy *= -1;
+                
+                b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+            });
+            animationFrameId = requestAnimationFrame(animate);
+        }
+        
+        function startAnimation() {
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        }
+        
+        function stopAnimation() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        }
+
+        nextBtn.addEventListener('click', loadNewIdiom);
+        checkBtn.addEventListener('click', checkAnswer);
+        clearBtn.addEventListener('click', clearAnswer);
+        hintBtn.addEventListener('click', showHint);
+        revealCharBtn.addEventListener('click', revealOneCharacter);
+        answerSlots.forEach((slot, index) => {
+            slot.addEventListener('click', () => onSlotClick(index));
+        });
+
+        loadNewIdiom();
+    </script>
+
+</body>
+</html>
+

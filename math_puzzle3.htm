@@ -1,0 +1,1129 @@
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加減數直式填充</title>
+    <!-- 載入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 Confetti 噴發動畫庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- 設定 Tailwind 配置，使用 Inter 字體和較大的基礎字體 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                        mono: ['Inconsolata', 'Consolas', 'monospace'], // 使用等寬字體確保直式對齊
+                    },
+                    fontSize: {
+                        '5xl': '3.5rem', // 放大字體方便小學生觀看
+                        '6xl': '4rem',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 確保每個單元格（digit cell）的寬度和高度一致 */
+        .digit-cell {
+            width: 5rem;
+            height: 5rem; /* 保持單元格為方形 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem; /* 使用 class 定義的 5xl 大小 */
+            line-height: 1;
+            padding: 0;
+            margin-right: 0.1rem; 
+            margin-bottom: 1.5rem; 
+            border-radius: 0.5rem;
+        }
+        
+        .num2-row .digit-cell {
+            margin-bottom: 0; 
+        }
+        
+        .result-row .digit-cell {
+            margin-bottom: 0; 
+            margin-top: 0.3rem; 
+        }
+
+        /* 數字輸入框樣式 */
+        .digit-input {
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            background-color: #FEEBC8; 
+            border: 4px solid #F6AD55; 
+            outline: none;
+            transition: all 0.2s ease-in-out;
+            font-size: 3.5rem; 
+            pointer-events: auto; 
+        }
+        
+        .digit-input:focus {
+            border-color: #4C51BF; 
+            box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.5);
+        }
+
+        .correct {
+            border-color: #38A169 !important; 
+            background-color: #C6F6D5 !important;
+        }
+
+        .incorrect {
+            border-color: #E53E3E !important; 
+            background-color: #FED7D7 !important;
+        }
+        
+        .final-answer {
+             background-color: #2D3748 !important; 
+             color: #FFFFFF !important; 
+             font-weight: bold;
+             border-color: #4A5568 !important;
+        }
+        
+        /* 直式計算外框容器 - 關鍵點: 設置相對定位 */
+        .calculation-box {
+            position: relative; 
+            background-color: #FFFFFF;
+            padding: 2rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            margin-bottom: 2rem;
+            display: flex; 
+            justify-content: center; 
+        }
+        
+        /* Grid 容器設置 */
+        #calculation-grid {
+            position: relative; 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0; 
+            z-index: 10; 
+        }
+        
+        /* 繪圖 Canvas 樣式 */
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20; 
+            pointer-events: none; 
+            background-color: transparent;
+        }
+        
+        /* 繪圖模式下，Canvas 接收事件 */
+        .drawing-active #drawing-canvas {
+            pointer-events: auto;
+        }
+        
+        /* 繪圖模式下，輸入框不接收事件 */
+        .drawing-active .digit-input {
+            pointer-events: none !important;
+        }
+
+        #horizontal-line {
+            position: absolute;
+            height: 4px;
+            background-color: #4A5568; 
+            z-index: 15; 
+            left: 0rem; 
+            top: 11.625rem; 
+            width: calc(5rem * 5 + 0.1rem * 5); 
+        }
+        
+        .color-selector {
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .color-selector:hover {
+            transform: scale(1.1);
+        }
+        /* 繪圖工具欄中的顏色激活樣式 */
+        .color-selector.tool-active {
+            box-shadow: 0 0 0 3px #4C51BF, 0 0 0 5px white;
+        }
+        
+        /* 繪圖模式下，畫筆游標 */
+        .drawing-active .cursor-pen {
+            cursor: crosshair !important; /* 標準的畫筆/繪圖游標 */
+        }
+        /* 繪圖模式下，橡皮擦游標 */
+        .drawing-active .cursor-eraser {
+            cursor: cell !important; /* 視覺上類似橡皮擦，例如一個十字框 */
+        }
+        
+        /* 繪圖模式按鈕的顏色和橡皮擦按鈕的激活樣式 */
+        .tool-button-active {
+            background-color: #4C51BF !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+
+        /* 新增：自訂題目類型選項的樣式 */
+        #settings input[type="radio"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: #fff;
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.5em;
+            height: 1.5em;
+            border: 0.15em solid #A0AEC0; /* gray-500 */
+            border-radius: 50%;
+            /* transform: translateY(-0.075em); */ /* 垂直佈局中移除此行以確保完美置中 */
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+        }
+
+        #settings input[type="radio"]::before {
+            content: "";
+            width: 0.85em;
+            height: 0.85em;
+            border-radius: 50%;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em #4C51BF; /* indigo-700 */
+        }
+
+        #settings input[type="radio"]:checked {
+            border-color: #4C51BF;
+        }
+
+        #settings input[type="radio"]:checked::before {
+            transform: scale(1);
+        }
+
+        #settings label {
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body class="bg-indigo-50 min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div id="math-app-container" class="bg-white shadow-2xl p-8 md:p-12 rounded-2xl w-full max-w-3xl text-center">
+
+        <h1 class="text-4xl md:text-5xl font-extrabold text-indigo-700 mb-6 flex items-center justify-center whitespace-nowrap">
+            🔢 加減數直式填充 🧠
+        </h1>
+        <p class="text-xl text-gray-600 mb-8">
+            請在方格內填上正確的數字，使直式成立。（最多四位數）
+        </p>
+        
+        <!-- 新增：題目類型與位數選擇 -->
+        <div id="settings" class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="flex flex-col md:flex-row justify-between items-start md:space-x-6 space-y-4 md:space-y-0">
+                <!-- 左半邊：題目類型 -->
+                <fieldset class="w-full md:w-1/2 border-r-0 md:border-r md:pr-6 border-gray-200">
+                    <legend class="text-lg font-semibold text-gray-700 mb-2 text-center">選擇題目類型</legend>
+                    <div class="flex justify-center items-center space-x-2 md:space-x-6">
+                        <div class="flex flex-col items-center">
+                            <input type="radio" id="type-add" name="problemType" value="addition" onchange="setProblemType(this.value)" checked>
+                            <label for="type-add" class="mt-2 text-lg text-gray-800">➕ 加數</label>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <input type="radio" id="type-subtract" name="problemType" value="subtraction" onchange="setProblemType(this.value)">
+                            <label for="type-subtract" class="mt-2 text-lg text-gray-800">➖ 減數</label>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <input type="radio" id="type-random" name="problemType" value="random" onchange="setProblemType(this.value)">
+                            <label for="type-random" class="mt-2 text-lg text-gray-800">🔀 隨機</label>
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <!-- 右半邊：位數選擇 -->
+                <fieldset class="w-full md:w-1/2">
+                    <legend class="text-lg font-semibold text-gray-700 mb-2 text-center">選擇位數</legend>
+                    <div class="flex justify-center items-center space-x-2 md:space-x-4">
+                        <div class="flex flex-col items-center">
+                            <input type="radio" id="digits-2" name="digitLength" value="2" onchange="setDigitLength(this.value)">
+                            <label for="digits-2" class="mt-2 text-lg text-gray-800">2位數</label>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <input type="radio" id="digits-3" name="digitLength" value="3" onchange="setDigitLength(this.value)" checked>
+                            <label for="digits-3" class="mt-2 text-lg text-gray-800">3位數</label>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <input type="radio" id="digits-4" name="digitLength" value="4" onchange="setDigitLength(this.value)">
+                            <label for="digits-4" class="mt-2 text-lg text-gray-800">4位數</label>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <input type="radio" id="digits-random" name="digitLength" value="random" onchange="setDigitLength(this.value)">
+                            <label for="digits-random" class="mt-2 text-lg text-gray-800">🔀 隨機</label>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+
+        <!-- 繪圖工具欄 -->
+        <div id="drawing-toolbar" class="flex justify-center items-center space-x-4 mb-4 p-3 bg-gray-100 rounded-lg shadow-inner">
+            <button id="draw-mode-toggle" class="py-2 px-4 rounded-lg text-lg font-semibold transition duration-200 bg-gray-300 text-gray-800 hover:bg-gray-400">
+                ✏️ 啟用繪圖
+            </button>
+            
+            <!-- 顏色選擇器 -->
+            <div id="color-red" class="color-selector bg-red-600 tool-active" data-color="red" onclick="setDrawColor('red')"></div>
+            <div id="color-blue" class="color-selector bg-blue-600" data-color="blue" onclick="setDrawColor('blue')"></div>
+            <div id="color-green" class="color-selector bg-green-600" data-color="green" onclick="setDrawColor('green')"></div>
+
+            <!-- 橡皮擦按鈕 -->
+            <button id="eraser-button" onclick="setEraser()" class="py-2 px-4 rounded-lg text-lg font-semibold transition duration-200 bg-gray-300 text-gray-800 hover:bg-gray-400">
+                🧼 橡皮擦
+            </button>
+            
+            <!-- 清除畫布按鈕 -->
+            <button id="clear-canvas-button" onclick="clearCanvas()" class="py-2 px-4 rounded-lg text-lg font-semibold transition duration-200 bg-red-500 text-white hover:bg-red-600">
+                🗑️ 清除畫布
+            </button>
+        </div>
+        
+        <!-- 直式計算外框 - 確保水平居中 -->
+        <div class="calculation-box">
+             <!-- 繪圖 Canvas 絕對定位於此 box 內 -->
+             <canvas id="drawing-canvas"></canvas>
+             
+             <!-- 直式計算區域 (Grid 佈局) - 移除 grid-cols-5，由 JS 動態控制 -->
+            <div id="calculation-grid" class="justify-items-end font-mono text-5xl mx-auto max-w-sm">
+                 <!-- 絕對定位的橫線將在這裡動態插入或保持靜態 -->
+                 <div id="horizontal-line"></div> 
+                <!-- 題目將由 JavaScript 渲染在這裡 -->
+            </div>
+        </div>
+
+
+        <!-- 按鈕和狀態訊息 -->
+        <div class="space-y-4">
+            <button id="check-button" onclick="checkAnswer()" class="w-full py-4 bg-green-500 text-white text-3xl font-bold rounded-xl shadow-lg hover:bg-green-600 transition duration-300 transform hover:scale-[1.02]">
+                ✅ 檢查答案
+            </button>
+            <button id="new-problem-button" onclick="generateProblem()" class="w-full py-3 bg-indigo-500 text-white text-2xl font-semibold rounded-xl shadow-md hover:bg-indigo-600 transition duration-300">
+                🔄 生成新題目
+            </button>
+
+            <div id="message-box" class="mt-6 p-4 text-2xl font-bold rounded-lg transition-opacity duration-500 opacity-0 h-10">
+                <!-- 訊息顯示區 -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        
+        let correctDigits = []; // 用來儲存所有正確的數字序列
+        let selectedDigitLength = 3; // 用戶選擇的位數 (可以是 'random')
+        let digitLength = 3; // 當前題目的實際位數
+        let attemptCount = 0; // 嘗試次數計數器
+        const maxAttempts = 3; // 最大嘗試次數
+        let problemType = 'addition'; // 'addition', 'subtraction', 或 'random'
+        
+        // =========================================================
+        // 繪圖功能相關變數
+        // =========================================================
+        let canvas, ctx;
+        let isDrawing = false;
+        let drawingMode = false; 
+        let currentTool = 'pen'; 
+        let currentColor = 'red';
+        // 筆觸寬度
+        const initialStrokeThickness = 4; 
+        let strokeThickness = initialStrokeThickness; 
+        const drawingToolToggle = document.getElementById('draw-mode-toggle');
+        const eraserButton = document.getElementById('eraser-button');
+        const appContainer = document.getElementById('math-app-container');
+        
+        // 偵測設備的像素比 (Device Pixel Ratio)
+        const dpr = window.devicePixelRatio || 1; 
+
+        /**
+         * 調整 Canvas 的游標樣式
+         */
+        function updateCanvasCursor() {
+            canvas.classList.remove('cursor-pen', 'cursor-eraser');
+            if (drawingMode) {
+                if (currentTool === 'pen') {
+                    canvas.classList.add('cursor-pen');
+                } else if (currentTool === 'eraser') {
+                    canvas.classList.add('cursor-eraser');
+                }
+            }
+        }
+
+        /**
+         * 初始化繪圖畫布和上下文
+         */
+        function initCanvas() {
+            canvas = document.getElementById('drawing-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // 綁定繪圖事件
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            
+            // 修正 1: 全局綁定 mouseup 和 touchend，確保即使滑鼠/手指移出畫布也能停止繪圖
+            window.addEventListener('mouseup', stopDrawing); 
+            window.addEventListener('touchend', stopDrawing);
+            
+            // 綁定觸摸事件 (用於移動設備)
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); 
+                startDrawing(e); 
+            });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault(); 
+                draw(e); 
+            });
+            
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas(); 
+            
+            // 初始化時設置畫筆為預設工具
+            setDrawColor('red', false); 
+            drawingMode = false;
+            appContainer.classList.remove('drawing-active');
+        }
+
+        /**
+         * 調整 Canvas 大小以匹配其容器，並應用 DPI 修正
+         */
+        function resizeCanvas() {
+            const box = canvas.parentElement;
+            
+            // 獲取 Canvas 的 CSS 尺寸 (以像素為單位)
+            const displayWidth = box.offsetWidth;
+            const displayHeight = box.offsetHeight;
+
+            // 暫存圖像數據
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            // 為了保持清晰度，我們需要考慮 DPI 比例來縮放暫存圖像
+            if (canvas.width > 0 && canvas.height > 0) {
+                 // 縮小以符合 CSS 像素 (反向縮放繪圖，保持圖像的邏輯大小)
+                tempCtx.scale(1 / dpr, 1 / dpr); 
+                tempCtx.drawImage(canvas, 0, 0);
+            }
+            
+
+            // 設置新的內部解析度 (乘以 DPR 進行高清渲染)
+            canvas.width = displayWidth * dpr;
+            canvas.height = displayHeight * dpr;
+            
+            // 設置 Canvas 的 CSS 尺寸 (這是瀏覽器看到的尺寸)
+            canvas.style.width = displayWidth + 'px';
+            canvas.style.height = displayHeight + 'px';
+
+            // 應用 DPI 縮放因子到繪圖上下文，這樣所有的繪圖指令都會自動縮放
+            // 修正：必須在設置完 width/height 之後再進行縮放
+            ctx.scale(dpr, dpr);
+            
+            // 恢復繪畫樣式，注意：筆觸寬度已經乘以 DPR 在 setDrawColor/setEraser 中處理
+            setToolStyles();
+
+            // 繪製回暫存的圖像
+            // 由於內部解析度改變，我們需要重新繪製，並使用原始的邏輯寬度/高度
+            if (tempCanvas.width > 0 && tempCanvas.height > 0) {
+                 // 繪製回時，使用 CSS 尺寸作為目標尺寸 (在已經 scale 的 ctx 上)
+                ctx.drawImage(tempCanvas, 0, 0, displayWidth, displayHeight); 
+            }
+        }
+        
+        /**
+         * 統一設定畫筆和橡皮擦的樣式
+         */
+        function setToolStyles() {
+            // 注意：ctx.scale(dpr, dpr) 已經在 resizeCanvas 中設定
+            
+            if (currentTool === 'eraser') {
+                // 橡皮擦：使用更大的邏輯寬度
+                ctx.lineWidth = 20; // 邏輯像素
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.strokeStyle = 'rgba(0,0,0,1)'; 
+            } else {
+                // 畫筆：使用預設的邏輯寬度
+                ctx.lineWidth = strokeThickness; // 邏輯像素
+                ctx.globalCompositeOperation = 'source-over'; 
+                ctx.strokeStyle = currentColor;
+            }
+            
+            ctx.lineCap = 'round';
+            // 消除線條模糊
+            // 繪製線條時，將線條的起點和終點定位到半像素位置，在高DPI環境中可改善清晰度
+            ctx.translate(0.5, 0.5);
+            ctx.translate(-0.5, -0.5); 
+        }
+
+
+        /**
+         * 切換繪圖模式 (開/關)
+         */
+        function toggleDrawingMode() {
+            drawingMode = !drawingMode;
+            
+            if (drawingMode) {
+                // 進入繪圖模式
+                drawingToolToggle.textContent = '✅ 退出繪圖';
+                drawingToolToggle.classList.add('tool-button-active');
+                appContainer.classList.add('drawing-active'); 
+                
+                // 確保當前工具的游標顯示正確
+                updateCanvasCursor();
+            } else {
+                // 退出繪圖模式
+                drawingToolToggle.textContent = '✏️ 啟用繪圖';
+                drawingToolToggle.classList.remove('tool-button-active');
+                appContainer.classList.remove('drawing-active'); 
+                
+                // 清除游標
+                canvas.classList.remove('cursor-pen', 'cursor-eraser');
+                
+                // 退出繪圖後自動聚焦到第一個未填寫的空格
+                focusFirstUnfilledBlank();
+            }
+        }
+
+        /**
+         * 輔助函數：從事件對象中獲取標準化的 (clientX, clientY)
+         */
+        function getClientCoords(e) {
+            if (e.touches && e.touches.length > 0) {
+                return { 
+                    x: e.touches[0].clientX, 
+                    y: e.touches[0].clientY 
+                };
+            }
+            // 處理滑鼠事件
+            return { 
+                x: e.clientX, 
+                y: e.clientY 
+            };
+        }
+
+        /**
+         * 開始繪圖或橡皮擦
+         */
+        function startDrawing(e) {
+            if (!drawingMode) return;
+            
+            // 阻止滑鼠的預設行為，防止與瀏覽器的拖曳選擇衝突
+            if (e.type === 'mousedown') {
+                e.preventDefault();
+            }
+            
+            // 使用最穩健的方法：基於客戶端座標 (clientX/Y) 和畫布邊界計算相對位置
+            const rect = canvas.getBoundingClientRect();
+            const coords = getClientCoords(e); 
+            
+            // 1. 計算相對 CSS 邊界的座標
+            let drawX = coords.x - rect.left;
+            let drawY = coords.y - rect.top;
+
+            // 由於我們已經在 ctx.scale(dpr, dpr) 中應用了 DPI 縮放，
+            // 這裡只需要計算相對於 CSS 尺寸的邏輯座標即可。
+            
+            ctx.beginPath();
+            ctx.moveTo(drawX, drawY);
+            isDrawing = true;
+        }
+
+        /**
+         * 停止繪圖
+         */
+        function stopDrawing() {
+            // 檢查 isDrawing，確保只有在繪圖模式下才執行
+            if (!isDrawing) return; 
+
+            ctx.closePath();
+            isDrawing = false;
+        }
+
+        /**
+         * 繪製線條
+         */
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            // 使用最穩健的方法：基於客戶端座標 (clientX/Y) 和畫布邊界計算相對位置
+            const rect = canvas.getBoundingClientRect();
+            const coords = getClientCoords(e); 
+            
+            // 1. 計算相對 CSS 邊界的座標
+            let drawX = coords.x - rect.left;
+            let drawY = coords.y - rect.top;
+            
+            // 由於我們已經在 ctx.scale(dpr, dpr) 中應用了 DPI 縮放，
+            // 這裡只需要計算相對於 CSS 尺寸的邏輯座標即可。
+
+            ctx.lineTo(drawX, drawY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(drawX, drawY);
+        }
+
+        /**
+         * 清除整個畫布
+         */
+        function clearCanvas() {
+            if (ctx) {
+                // 使用邏輯像素尺寸來清除 (因為 ctx 已經縮放)
+                // 必須使用 canvas.width / dpr, canvas.height / dpr 來獲取正確的邏輯尺寸
+                ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+            }
+        }
+        
+        /**
+         * 設定畫筆顏色
+         * @param {string} color 顏色名稱或代碼
+         * @param {boolean} shouldToggle 是否應該在設置後自動切換到繪圖模式 (預設為 true)
+         */
+        function setDrawColor(color, shouldToggle = true) {
+            currentTool = 'pen';
+            currentColor = color;
+            strokeThickness = initialStrokeThickness; // 使用新的筆觸寬度
+            
+            setToolStyles(); // 應用樣式
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.color-selector').forEach(btn => btn.classList.remove('tool-active'));
+            document.getElementById(`color-${color}`).classList.add('tool-active');
+            
+            eraserButton.classList.remove('tool-button-active');
+            eraserButton.classList.replace('bg-indigo-500', 'bg-gray-300');
+            eraserButton.classList.replace('text-white', 'text-gray-800');
+
+            if (shouldToggle && !drawingMode) {
+                toggleDrawingMode();
+            } else if (drawingMode) {
+                updateCanvasCursor(); // 確保游標更新
+            }
+        }
+        
+        /**
+         * 設定為橡皮擦模式
+         */
+        function setEraser() {
+            currentTool = 'eraser';
+            
+            setToolStyles(); // 應用樣式
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.color-selector').forEach(btn => btn.classList.remove('tool-active'));
+            
+            eraserButton.classList.add('tool-button-active');
+            
+            if (!drawingMode) {
+                toggleDrawingMode(); 
+            } else {
+                updateCanvasCursor(); // 確保游標更新
+            }
+        }
+        
+        // =========================================================
+        // 數學邏輯和聚焦功能
+        // =========================================================
+
+        /**
+         * 設定要生成的題目類型
+         */
+        function setProblemType(type) {
+            problemType = type;
+        }
+
+        /**
+         * 新增：設定題目位數
+         */
+        function setDigitLength(length) {
+            selectedDigitLength = length; // Store the user's selection
+        }
+
+        /**
+         * 輔助函數：將焦點移動到下一個最邏輯的空格 (右至左，上至下)
+         */
+        function focusFirstUnfilledBlank() {
+            const allInputElements = correctDigits
+                .map(item => ({
+                    id: item.id,
+                    element: document.getElementById(item.id),
+                    row: item.row,
+                    col: item.col
+                }))
+                .filter(item => item.element && item.element.value.trim() === '' && !item.element.readOnly);
+            
+            // 排序：優先最大 Col (最右邊)，其次最小 Row (最上面)
+            allInputElements.sort((a, b) => {
+                if (a.col !== b.col) {
+                    return b.col - a.col; // Col Descending (4, 3, 2, 1)
+                }
+                return a.row - b.row; // Row Ascending (0, 1, 2)
+            });
+
+            if (allInputElements.length > 0) {
+                allInputElements[0].element.focus();
+            }
+        }
+
+
+        /**
+         * 播放噴發紙碎慶祝動畫
+         */
+        function runConfetti() {
+            if (typeof confetti === 'undefined') return; 
+            
+            confetti({
+                particleCount: 150,
+                spread: 120,
+                origin: { y: 0.6 }, 
+                colors: ['#FFC107', '#38A169', '#4C51BF', '#F6AD55']
+            });
+        }
+
+        /**
+         * 輔助函數：生成指定範圍內的隨機整數
+         */
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        /**
+         * 輔助函數：將數字轉換為固定長度（length位）的字符串陣列
+         */
+        function numberToPaddedDigits(num, length) {
+            const numStr = String(num);
+            const paddedDigits = Array(length).fill(''); 
+            
+            for (let i = 0; i < numStr.length; i++) {
+                paddedDigits[length - numStr.length + i] = numStr[i];
+            }
+            return paddedDigits;
+        }
+        
+        /**
+         * 處理輸入事件並自動將焦點移到下一個最邏輯的空格
+         */
+        function handleInputAndAdvance(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+
+            if (this.value) {
+                setTimeout(() => {
+                    const unfilledBlanks = correctDigits
+                        .map(item => ({
+                            ...item,
+                            inputElement: document.getElementById(item.id)
+                        }))
+                        .filter(item => item.inputElement && item.inputElement.value.trim() === '' && !item.inputElement.readOnly); 
+
+                    if (unfilledBlanks.length === 0) {
+                        return;
+                    }
+
+                    unfilledBlanks.sort((a, b) => {
+                        if (a.col !== b.col) {
+                            return b.col - a.col; 
+                        }
+                        return a.row - b.row;
+                    });
+                    
+                    unfilledBlanks[0].inputElement.focus();
+                }, 0); 
+            }
+        }
+
+        /**
+         * 渲染直式計算的 HTML 結構
+         */
+        function renderCalculation(operator, num1Digits, num2Digits, resultDigits, blankPositions) {
+            const grid = document.getElementById('calculation-grid');
+            const lineElement = document.getElementById('horizontal-line');
+
+            // 動態調整 Grid 欄數和水平線寬度
+            const numCols = digitLength + 1;
+            grid.style.gridTemplateColumns = `repeat(${numCols}, 1fr)`;
+
+            if (lineElement) {
+                lineElement.remove();
+            }
+            
+            grid.innerHTML = '';
+            
+            if (lineElement) {
+                lineElement.style.width = '100%'; // 讓橫線寬度自適應容器
+                grid.appendChild(lineElement);
+            } 
+            
+            const rows = [num1Digits, num2Digits, resultDigits];
+            
+            rows.slice(0, 2).forEach((digits, rowIndex) => {
+                const rowClass = rowIndex === 1 ? 'num2-row' : '';
+
+                // First column: operator or empty space
+                if (rowIndex === 1) { // operator in the second row
+                    const opCell = document.createElement('div');
+                    opCell.className = `digit-cell text-indigo-600 font-bold ${rowClass}`;
+                    opCell.textContent = operator;
+                    grid.appendChild(opCell);
+                } else {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'digit-cell text-transparent'; 
+                    emptyCell.textContent = '';
+                    grid.appendChild(emptyCell);
+                }
+                
+                // Add digit cells for the rest of the columns
+                digits.forEach((digit, colIndexOffset) => {
+                    const colIndex = colIndexOffset + 1; 
+                    const isBlank = blankPositions.some(pos => pos[0] === rowIndex && pos[1] === colIndex);
+                    
+                    const cell = document.createElement('div');
+                    cell.className = `digit-cell text-gray-800 ${rowClass}`;
+
+                    if (isBlank) {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.maxLength = 1; 
+                        input.pattern = '[0-9]'; 
+                        input.id = `input-${rowIndex}-${colIndex}`;
+                        input.className = 'digit-input font-mono';
+                        input.placeholder = ' '; 
+                        input.dataset.row = rowIndex;
+                        input.dataset.col = colIndex;
+                        input.oninput = handleInputAndAdvance; 
+                        cell.appendChild(input);
+                    } else if (digit !== '') {
+                        cell.textContent = digit;
+                        cell.classList.add('font-bold', 'text-gray-800');
+                    } else {
+                        cell.textContent = '';
+                        cell.classList.add('text-transparent'); 
+                    }
+                    
+                    grid.appendChild(cell);
+                });
+            });
+            
+            const children = Array.from(grid.children).filter(child => child.id !== 'horizontal-line');
+            children.forEach(child => grid.appendChild(child));
+            grid.appendChild(lineElement); 
+
+            rows.slice(2, 3).forEach((digits, rowIndexOffset) => {
+                const rowIndex = 2; 
+                
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'digit-cell text-transparent result-row'; 
+                emptyCell.textContent = '';
+                grid.appendChild(emptyCell);
+                
+                digits.forEach((digit, colIndexOffset) => {
+                    const colIndex = colIndexOffset + 1; 
+                    const isBlank = blankPositions.some(pos => pos[0] === rowIndex && pos[1] === colIndex);
+                    
+                    const cell = document.createElement('div');
+                    cell.className = 'digit-cell text-gray-800 result-row'; 
+                    
+                    if (isBlank) {
+                        const input = document.createElement('input');
+                        input.type = 'text';
+                        input.maxLength = 1; 
+                        input.pattern = '[0-9]';
+                        input.id = `input-${rowIndex}-${colIndex}`;
+                        input.className = 'digit-input font-mono';
+                        input.placeholder = ' '; 
+                        input.dataset.row = rowIndex;
+                        input.dataset.col = colIndex;
+                        input.oninput = handleInputAndAdvance; 
+                        cell.appendChild(input);
+                    } else if (digit !== '') {
+                        cell.textContent = digit;
+                        cell.classList.add('font-bold', 'text-indigo-800');
+                    } else {
+                        cell.textContent = '';
+                        cell.classList.add('text-transparent');
+                    }
+                    
+                    grid.appendChild(cell);
+                });
+            });
+        }
+        
+        /**
+         * 隨機生成一道加數或減數題目並渲染
+         */
+        function generateProblem() {
+            attemptCount = 0; 
+
+            // 新增：根據用戶選擇決定當前題目的實際位數
+            if (selectedDigitLength === 'random') {
+                digitLength = getRandomInt(2, 4);
+            } else {
+                digitLength = parseInt(selectedDigitLength, 10);
+            }
+
+            let num1, num2, result, operator;
+            let num1Digits, num2Digits, resultDigits;
+            let blanksToHide;
+            let isAddition; // 宣告變數
+
+            
+            // 修正: 確保生成新題目時，退出繪圖模式
+            if (drawingMode) {
+                toggleDrawingMode();
+            }
+            
+            // 重置畫筆狀態到預設紅色，但不自動開啟繪圖模式
+            setDrawColor('red', false);
+
+            while (true) {
+                // 根據用戶選擇決定題目類型
+                if (problemType === 'addition') {
+                    isAddition = true;
+                } else if (problemType === 'subtraction') {
+                    isAddition = false;
+                } else { // 'random'
+                    isAddition = Math.random() < 0.5;
+                }
+
+                // 根據選擇的位數動態設定數字範圍
+                const minRange = Math.pow(10, digitLength - 1);
+                const maxRange = Math.pow(10, digitLength) - 1;
+                
+                if (isAddition) {
+                    operator = '+';
+                    // 確保至少一個數字是所選的最大位數
+                    num1 = getRandomInt(minRange, maxRange);
+                    // 另一個數字可以是 1 到最大位數之間的任何數
+                    num2 = getRandomInt(1, maxRange);
+                    result = num1 + num2;
+
+                    if (result > maxRange) { // 確保結果不超過所選位數
+                         continue; 
+                    }
+                } else {
+                    operator = '−'; 
+                    // 確保被減數是最大位數
+                    num1 = getRandomInt(minRange, maxRange); 
+                    // 減數可以是 1 到被減數之間的任何數
+                    num2 = getRandomInt(1, num1);
+                    result = num1 - num2;
+                }
+
+                num1Digits = numberToPaddedDigits(num1, digitLength);
+                num2Digits = numberToPaddedDigits(num2, digitLength);
+                resultDigits = numberToPaddedDigits(result, digitLength);
+                
+                const rowsData = [
+                    { index: 0, digits: num1Digits },
+                    { index: 1, digits: num2Digits },
+                    { index: 2, digits: resultDigits } 
+                ];
+                
+                const allPositions = [];
+                rowsData.forEach(row => {
+                     row.digits.forEach((digit, colIndexOffset) => {
+                        const col = colIndexOffset + 1;
+                        if (digit !== '') allPositions.push({ row: row.index, col: col, digit: digit });
+                    });
+                });
+
+                // 動態設定填空數量，以避免在位數較少時陷入無限循環
+                let minBlanks, maxBlanks;
+                if (digitLength === 2) {
+                    minBlanks = 2;
+                    maxBlanks = 3; // 調整數量以符合欄位限制
+                } else if (digitLength === 3) {
+                    minBlanks = 3;
+                    maxBlanks = 4; // 調整數量
+                } else { // 4 digits
+                    minBlanks = 4;
+                    maxBlanks = 5; // 調整數量
+                }
+                const numBlanks = getRandomInt(minBlanks, maxBlanks); 
+
+                blanksToHide = [];
+                // 重新引入 occupiedCols 限制，確保每欄最多一個填空
+                const occupiedCols = new Set(); 
+                
+                // 將所有可能的位置隨機排序，以增加隨機性
+                let positionsPool = [...allPositions].sort(() => Math.random() - 0.5);
+                let attempts = 0; // 安全計數器，防止意外的無限循環
+
+                // 當填空數不足，且還有候選位置時，繼續選取
+                while (blanksToHide.length < numBlanks && positionsPool.length > 0 && attempts < allPositions.length * 2) {
+                    const pos = positionsPool.pop(); // 從隨機排序的陣列中取出一個
+                    
+                    // 檢查這一欄是否已經有填空了
+                    if (pos && !occupiedCols.has(pos.col)) {
+                        blanksToHide.push(pos);
+                        occupiedCols.add(pos.col); // 標記這一欄已被佔用
+                    }
+                    attempts++;
+                }
+                
+                // 如果最終生成的填空數少於下限，則重新生成整道題目
+                if (blanksToHide.length < minBlanks) {
+                     continue; 
+                }
+
+                break;
+            }
+            
+            correctDigits = blanksToHide.map(pos => ({ 
+                row: pos.row, 
+                col: pos.col, 
+                answer: pos.digit,
+                id: `input-${pos.row}-${pos.col}`
+            }));
+            
+            const blankPositions = blanksToHide.map(pos => [pos.row, pos.col]);
+
+            renderCalculation(operator, num1Digits, num2Digits, resultDigits, blankPositions);
+
+            // 修正 2: 延遲調整 Canvas 尺寸和清除，確保它是在 DOM 結構確定後執行，以覆蓋整個區域
+            setTimeout(() => {
+                if (ctx) {
+                    resizeCanvas(); 
+                    clearCanvas(); 
+                }
+            }, 0); 
+            
+            focusFirstUnfilledBlank();
+
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = '';
+            messageBox.className = 'mt-6 p-4 text-2xl font-bold rounded-lg transition-opacity duration-500 opacity-0 h-10';
+            
+            document.getElementById('check-button').disabled = false;
+        }
+        
+        /**
+         * 顯示正確答案並鎖定輸入框
+         */
+        function showAnswer() {
+            if (drawingMode) {
+                toggleDrawingMode();
+            }
+
+            correctDigits.forEach(item => {
+                const inputElement = document.getElementById(item.id);
+                if (!inputElement) return;
+
+                inputElement.value = item.answer;
+                inputElement.readOnly = true; 
+                inputElement.classList.remove('incorrect', 'correct');
+                inputElement.classList.add('final-answer');
+            });
+            
+            document.getElementById('check-button').disabled = true;
+
+            const messageBox = document.getElementById('message-box');
+            messageBox.classList.remove('opacity-0', 'bg-red-100', 'text-red-700');
+            messageBox.textContent = '💡 這是正確答案，請嘗試理解計算步驟。';
+            messageBox.classList.add('bg-gray-200', 'text-gray-800');
+        }
+
+        /**
+         * 檢查所有填空方格的答案是否正確
+         */
+        function checkAnswer() {
+            if (drawingMode) {
+                toggleDrawingMode();
+            }
+
+            let allCorrect = true;
+            const messageBox = document.getElementById('message-box');
+            let firstIncorrectInput = null;
+
+            correctDigits.forEach(item => {
+                const inputElement = document.getElementById(item.id);
+                if (!inputElement || inputElement.readOnly) return; 
+                
+                const userInput = inputElement.value.trim();
+                const isCorrect = userInput === item.answer;
+
+                inputElement.classList.remove('correct', 'incorrect');
+                
+                if (isCorrect) {
+                    inputElement.classList.add('correct');
+                } else {
+                    inputElement.classList.add('incorrect');
+                    allCorrect = false;
+                    if (!firstIncorrectInput) {
+                        firstIncorrectInput = inputElement; 
+                    }
+                }
+            });
+
+            messageBox.classList.remove('opacity-0', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-gray-200', 'text-gray-800');
+            messageBox.classList.add('opacity-100');
+
+            if (allCorrect) {
+                messageBox.textContent = '太棒了！所有答案都正確！🎉💯';
+                messageBox.classList.add('bg-green-100', 'text-green-700');
+                document.getElementById('check-button').disabled = true; 
+                runConfetti(); 
+            } else {
+                attemptCount++; 
+                
+                if (attemptCount >= maxAttempts) {
+                    showAnswer();
+                } else {
+                    messageBox.textContent = `請再檢查一下，有些數字不對喔。🤔 (第 ${attemptCount} 次嘗試 / 共 ${maxAttempts} 次)`;
+                    messageBox.classList.add('bg-red-100', 'text-red-700');
+                    
+                    if (firstIncorrectInput) {
+                        firstIncorrectInput.focus();
+                    }
+                }
+            }
+        }
+        
+        // 頁面載入後立即初始化和生成第一道題目
+        window.onload = function() {
+            initCanvas(); 
+            generateProblem(); 
+            
+            document.getElementById('draw-mode-toggle').onclick = toggleDrawingMode;
+        };
+        
+        // 設定全域鍵盤事件監聽，用於 Enter 鍵檢查和 Space 鍵生成新題
+        document.addEventListener('keydown', function(event) {
+            const isInputFocused = event.target.tagName === 'INPUT' && event.target.classList.contains('digit-input');
+
+            if (event.key === 'Enter') {
+                if (document.getElementById('check-button').disabled) {
+                    generateProblem();
+                } else {
+                    checkAnswer();
+                }
+                event.preventDefault(); 
+            } 
+            
+            if (event.key === ' ' && !isInputFocused && !drawingMode) { 
+                generateProblem();
+                event.preventDefault(); 
+            }
+            
+            // 按下 ESC 鍵退出繪圖模式
+            if (event.key === 'Escape' && drawingMode) {
+                 toggleDrawingMode();
+            }
+        });
+
+
+    </script>
+</body>
+</html>
+
+
