@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二年級常識科綜合評估 (詳細報告版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #fff7ed;
+            touch-action: manipulation;
+        }
+        .option-btn {
+            transition: all 0.2s;
+        }
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+        /* 選中狀態 */
+        .selected-option {
+            background-color: #ffedd5 !important; /* Orange-100 */
+            border-color: #f97316 !important; /* Orange-500 */
+            color: #9a3412 !important; /* Orange-800 */
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.4s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .report-card {
+            max-height: 60vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-3xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border-4 border-orange-200 relative" id="app-container">
+        
+        <!-- 1. 歡迎畫面 -->
+        <div id="start-screen" class="p-8 text-center space-y-6">
+            <div class="text-6xl mb-4">🎓 📝 💯</div>
+            <h1 class="text-3xl font-bold text-orange-600 tracking-wide">常識科綜合評估<br>(模擬考試模式)</h1>
+            
+            <div class="bg-orange-50 p-6 rounded-xl text-left text-gray-700 space-y-3 shadow-inner">
+                <h3 class="font-bold text-lg text-orange-800 border-b border-orange-200 pb-2 mb-2">考試規則：</h3>
+                <p>1. 總共有 <strong>20 題</strong>。</p>
+                <p>2. 作答時<strong>不會</strong>立即顯示對錯。</p>
+                <p>3. 完成所有題目後，會派發<strong>詳細成績單</strong>。</p>
+                <p>4. 請細心閱讀題目，選出最合適的答案。</p>
+            </div>
+
+            <div class="pt-2">
+                <input type="text" id="student-name" placeholder="請輸入你的名字" class="w-full p-4 border-2 border-orange-200 rounded-xl text-xl focus:border-orange-500 focus:outline-none mb-4 text-center">
+                <button onclick="startQuiz()" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl text-xl shadow-md transition transform hover:-translate-y-1">
+                    開始考試 ✍️
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. 測驗畫面 -->
+        <div id="quiz-screen" class="hidden flex flex-col h-full" style="min-height: 600px;">
+            <!-- 頂部資訊 -->
+            <div class="bg-orange-100 p-4 flex justify-between items-center shadow-sm z-10">
+                <div class="flex items-center space-x-2">
+                    <span class="font-bold text-orange-800 text-lg" id="display-name">同學</span>
+                </div>
+                <div class="text-orange-900 font-bold text-lg">
+                    第 <span id="current-q-num" class="text-2xl">1</span> / <span id="total-q-num">20</span> 題
+                </div>
+            </div>
+            <!-- 進度條 -->
+            <div class="w-full bg-gray-200 h-3">
+                <div id="progress-bar" class="bg-green-500 h-3 transition-all duration-300" style="width: 0%"></div>
+            </div>
+
+            <!-- 問題區域 -->
+            <div class="p-6 flex-grow flex flex-col justify-between overflow-y-auto">
+                <div id="question-container" class="fade-in space-y-6">
+                    <!-- 標籤 -->
+                    <span id="q-category" class="inline-block bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full font-bold mb-2">題目類型</span>
+                    
+                    <!-- 題目 -->
+                    <h2 id="q-text" class="text-2xl font-bold text-gray-800 leading-relaxed">
+                        題目載入中...
+                    </h2>
+
+                    <!-- 選項 -->
+                    <div id="options-grid" class="grid grid-cols-1 gap-4 mt-6">
+                        <!-- JS生成選項 -->
+                    </div>
+                </div>
+
+                <!-- 下一題按鈕 (固定在底部) -->
+                <div class="mt-8 pt-4 border-t border-gray-100">
+                    <button id="next-btn" onclick="confirmAndNext()" class="w-full bg-gray-300 text-white font-bold py-4 rounded-xl text-xl cursor-not-allowed transition" disabled>
+                        請先選擇答案
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 結果畫面 (成績單) -->
+        <div id="result-screen" class="hidden flex flex-col h-full max-h-screen">
+            <div class="p-6 bg-orange-500 text-white text-center shadow-md shrink-0 z-10">
+                <h2 class="text-3xl font-bold mb-2">考試成績單</h2>
+                <div class="flex justify-center items-end space-x-2">
+                    <span class="text-6xl font-bold" id="final-score">0</span>
+                    <span class="text-2xl opacity-80 pb-2">/ 100</span>
+                </div>
+                <p id="result-message" class="mt-2 text-orange-100 font-medium"></p>
+            </div>
+
+            <!-- 詳細報告列表 (可捲動) -->
+            <div class="flex-grow bg-gray-50 p-6 report-card" id="report-container">
+                <!-- JS生成報告卡片 -->
+            </div>
+
+            <div class="p-4 bg-white border-t border-gray-200 shrink-0 z-10">
+                <button onclick="restartQuiz()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl text-lg shadow-md transition">
+                    再次挑戰 🔄
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 擴充至 20 題，涵蓋所有單元細節
+        const questions = [
+            // --- 單元一：日與夜 ---
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "1. 🦉 貓頭鷹有一雙「大眼睛」，這對牠有什麼幫助？",
+                options: ["為了看起來更威猛", "為了在黑暗中看清獵物", "為了嚇走其他動物", "為了在白天睡覺"],
+                answer: 1,
+                explanation: "貓頭鷹是夜行動物，大眼睛能幫助牠在微弱光線下看見獵物。"
+            },
+            {
+                type: "tf", category: "是非題", score: 5,
+                text: "2. 🌞 白天的時候，我們通常看不見星星，是因為星星這時候都躲起來睡覺了。",
+                answer: false,
+                explanation: "星星一直都在，只是白天太陽的光太強，蓋過了微弱的星光，所以我們看不見。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "3. 💡 以下哪一種燈光在晚上是「不必要」的，屬於浪費能源？",
+                options: ["街道上的路燈", "書房裡閱讀時的檯燈", "沒有人的房間開著的大燈", "汽車的車頭燈"],
+                answer: 2,
+                explanation: "沒人在房間時應該關燈，節約能源。"
+            },
+            {
+                type: "checkbox", category: "多選題", score: 5,
+                text: "4. 🏠 以下哪些活動適合在「晚上」進行？(可多選)",
+                options: ["曬太陽", "睡覺", "賞月", "放風箏"],
+                correctIndices: [1, 2],
+                explanation: "晚上沒有太陽和風力通常不足，適合睡覺或觀賞月亮。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "5. 🏘️ 如果你看到鄰居張太太，有禮貌的表現應該是？",
+                options: ["裝作看不見", "大聲尖叫", "向她點頭微笑或說聲早晨", "向她做鬼臉"],
+                answer: 2,
+                explanation: "與鄰居打招呼是睦鄰友好的表現。"
+            },
+
+            // --- 單元二：我的社區 ---
+            {
+                type: "mc", category: "情境題", score: 5,
+                text: "6. 📮 志強寫了一封感謝卡給老師，他想寄出去，他應該去哪裡？",
+                options: ["消防局", "運動場", "郵政局", "超級市場"],
+                answer: 2,
+                explanation: "郵政局負責處理郵件寄送服務。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "7. 📍 在地圖上，我們使用「符號」的主要目的是什麼？",
+                options: ["讓地圖色彩更豐富", "用簡單的圖案代表設施位置", "為了畫得比較漂亮", "為了填滿空間"],
+                answer: 1,
+                explanation: "符號能簡潔清晰地標示設施位置，方便閱讀。"
+            },
+            {
+                type: "mc", category: "配對題", score: 5,
+                text: "8. 🛒 媽媽想買新鮮的豬肉和青菜煮晚餐，她應該去哪裡？",
+                options: ["圖書館", "街市", "公園", "警署"],
+                answer: 1,
+                explanation: "街市是主要售賣新鮮食材的地方。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "9. 📚 在圖書館內，我們應該遵守什麼規則？",
+                options: ["保持安靜", "大聲朗讀", "追逐奔跑", "吃零食"],
+                answer: 0,
+                explanation: "圖書館是閱讀的地方，必須保持安靜以免打擾他人。"
+            },
+
+            // --- 單元三：到郊野公園去 ---
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "10. 🔢 在郊野公園遠足時，哪種設施可以告訴我們「所處的位置」？",
+                options: ["涼亭", "標距柱", "燒烤爐", "垃圾箱"],
+                answer: 1,
+                explanation: "「標距柱」上有編號，能幫助行山人士確定位置，迷路時亦可用作求救座標。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "11. 🚮 在郊野公園野餐後，如果你發現垃圾箱滿了，正確的做法是？",
+                options: ["把垃圾放在垃圾箱旁", "把垃圾塞進去", "把垃圾帶走 (Take your litter home)", "丟在草叢裡"],
+                answer: 2,
+                explanation: "愛護大自然，實行「自己垃圾自己帶走」。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "12. ℹ️ 如果想了解郊野公園內的植物資訊或路徑資料，我們可以看什麼？",
+                options: ["告示板 / 說明牌", "燒烤爐", "路燈", "垃圾桶"],
+                answer: 0,
+                explanation: "說明牌或告示板通常載有地圖及生態資訊。"
+            },
+            {
+                type: "checkbox", category: "多選題", score: 5,
+                text: "13. 🎒 遠足時，我們「必須」帶備以下哪些物品？(可多選)",
+                options: ["充足的水", "遊戲機", "手提電話", "沉重的課本"],
+                correctIndices: [0, 2],
+                explanation: "水補充水分，電話用於聯絡求救。遊戲機和課本會增加負擔且不必要。"
+            },
+            {
+                type: "mc", category: "情境題", score: 5,
+                text: "14. 🌸 小明看到路邊有一朵很美的花，他想摘下來。你會對他說什麼？",
+                options: ["「這朵花很美，快摘吧！」", "「眼看手勿動，我們要愛護植物。」", "「我也要摘一朵。」", "「沒人看見就沒關係。」"],
+                answer: 1,
+                explanation: "郊野公園內的一草一木都是公物，不可採摘。"
+            },
+
+            // --- 單元四：美麗的海灘 ---
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "15. 🦈 海灘上的「防鯊網」有什麼用途？",
+                options: ["用來捕魚", "防止鯊魚進入泳區，保護泳客", "用來掛衣服", "裝飾海面"],
+                answer: 1,
+                explanation: "防鯊網的作用是阻隔鯊魚，保障泳客安全。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "16. 🚩 如果在海灘看到掛起「紅旗」，代表什麼意思？",
+                options: ["今日天氣很好", "海浪大或有危險，切勿下水", "可以在這裡野餐", "救生員正在休息"],
+                answer: 1,
+                explanation: "紅旗懸掛表示該處游泳有危險，嚴禁下水。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "17. 🚑 在海灘受傷了，我們應該去哪裡尋求協助？",
+                options: ["更衣室", "小食亭", "救護站", "浮台"],
+                answer: 2,
+                explanation: "救護站有急救用品和人員可處理傷口。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "18. 🏊 下水游泳前，為什麼要先做熱身運動？",
+                options: ["為了展示身材", "為了預防抽筋", "為了曬黑皮膚", "為了認識朋友"],
+                answer: 1,
+                explanation: "熱身運動能伸展肌肉，減少游泳時抽筋的機會。"
+            },
+            {
+                type: "mc", category: "選擇題", score: 5,
+                text: "19. 🚻 游泳後，更換衣服應該去哪裡？",
+                options: ["沙灘上", "更衣室", "救護站", "浮台"],
+                answer: 1,
+                explanation: "更衣室是更換衣物的指定場所，保持衛生及私隱。"
+            },
+            {
+                type: "checkbox", category: "多選題", score: 5,
+                text: "20. 🚫 在海灘，以下哪些行為是「不正確」的？(選出所有錯誤行為)",
+                options: ["在海裡清洗燒烤叉", "塗防曬用品", "亂拋垃圾", "在安全泳區游泳"],
+                correctIndices: [0, 2],
+                explanation: "清洗燒烤叉會污染海水，亂拋垃圾會破壞環境衛生。"
+            }
+        ];
+
+        // 狀態變數
+        let currentQuestionIndex = 0;
+        let userAnswers = []; // 儲存使用者答案：{ index: int/array, isCorrect: bool }
+        let userName = "";
+
+        // DOM Elements
+        const appContainer = document.getElementById('app-container');
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const questionContainer = document.getElementById('question-container');
+        const nextBtn = document.getElementById('next-btn');
+        const progressBar = document.getElementById('progress-bar');
+
+        function startQuiz() {
+            const nameInput = document.getElementById('student-name');
+            if (nameInput.value.trim() === "") {
+                alert("請輸入你的名字喔！");
+                return;
+            }
+            userName = nameInput.value;
+            document.getElementById('display-name').innerText = userName;
+            
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            
+            // 重置狀態
+            currentQuestionIndex = 0;
+            userAnswers = new Array(questions.length).fill(null);
+            updateProgress();
+            showQuestion();
+        }
+
+        function updateProgress() {
+            document.getElementById('current-q-num').innerText = currentQuestionIndex + 1;
+            document.getElementById('total-q-num').innerText = questions.length;
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        function showQuestion() {
+            const q = questions[currentQuestionIndex];
+            
+            // 更新 UI
+            document.getElementById('q-category').innerText = q.category;
+            document.getElementById('q-text').innerText = q.text;
+            
+            // 重置按鈕狀態
+            nextBtn.disabled = true;
+            nextBtn.innerText = q.type === 'checkbox' ? "選好了，下一題 ➡️" : "請選擇答案";
+            nextBtn.className = "w-full bg-gray-300 text-white font-bold py-4 rounded-xl text-xl cursor-not-allowed transition";
+
+            const optionsGrid = document.getElementById('options-grid');
+            optionsGrid.innerHTML = '';
+
+            // 渲染選項
+            if (q.type === 'mc' || q.type === 'tf' || q.type === '配對題' || q.type === '情境題') {
+                const opts = q.type === 'tf' ? ["正確 (True)", "錯誤 (False)"] : q.options;
+                
+                opts.forEach((opt, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn w-full text-left p-4 rounded-xl border-2 border-orange-100 hover:bg-orange-50 text-lg font-medium text-gray-700';
+                    
+                    let label = "";
+                    if (q.type !== 'tf') label = String.fromCharCode(65 + index) + ". ";
+                    else label = (index === 0 ? "⭕ " : "❌ ");
+                    
+                    btn.innerHTML = `<span class="font-bold text-orange-500 mr-2">${label}</span>${opt}`;
+                    
+                    btn.onclick = () => selectOption(index, btn);
+                    optionsGrid.appendChild(btn);
+                });
+
+            } else if (q.type === 'checkbox') {
+                // 多選題邏輯
+                q.options.forEach((opt, index) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = "flex items-center p-4 rounded-xl border-2 border-orange-100 hover:bg-orange-50 cursor-pointer option-checkbox-wrapper";
+                    wrapper.innerHTML = `
+                        <input type="checkbox" id="opt-${index}" value="${index}" class="w-6 h-6 text-orange-600 rounded focus:ring-orange-500 mr-3 pointer-events-none">
+                        <label class="text-lg text-gray-700 cursor-pointer flex-grow select-none">${opt}</label>
+                    `;
+                    wrapper.onclick = () => toggleCheckbox(index, wrapper);
+                    optionsGrid.appendChild(wrapper);
+                });
+            }
+        }
+
+        // 單選題選擇邏輯
+        function selectOption(index, btnElement) {
+            // 清除其他選中狀態
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected-option'));
+            // 加入選中狀態
+            btnElement.classList.add('selected-option');
+            
+            // 暫存答案
+            userAnswers[currentQuestionIndex] = index;
+            
+            // 啟用下一題按鈕
+            enableNextBtn();
+        }
+
+        // 多選題選擇邏輯
+        function toggleCheckbox(index, wrapper) {
+            const checkbox = wrapper.querySelector('input');
+            checkbox.checked = !checkbox.checked;
+            
+            if(checkbox.checked) {
+                wrapper.classList.add('selected-option');
+            } else {
+                wrapper.classList.remove('selected-option');
+            }
+
+            // 檢查是否有選中至少一個
+            const anyChecked = document.querySelectorAll('input[type="checkbox"]:checked').length > 0;
+            
+            // 更新暫存答案 (儲存選中的 index 陣列)
+            const checkedIndices = Array.from(document.querySelectorAll('input[type="checkbox"]:checked')).map(cb => parseInt(cb.value));
+            userAnswers[currentQuestionIndex] = checkedIndices;
+
+            if (anyChecked) enableNextBtn();
+            else disableNextBtn();
+        }
+
+        function enableNextBtn() {
+            nextBtn.disabled = false;
+            nextBtn.innerText = currentQuestionIndex === questions.length - 1 ? "交卷，查看成績 🏁" : "下一題 ➡️";
+            nextBtn.className = "w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl text-xl shadow-md transition transform hover:-translate-y-1";
+        }
+
+        function disableNextBtn() {
+            nextBtn.disabled = true;
+            nextBtn.innerText = "請選擇答案";
+            nextBtn.className = "w-full bg-gray-300 text-white font-bold py-4 rounded-xl text-xl cursor-not-allowed transition";
+        }
+
+        function confirmAndNext() {
+            // 這裡已經在 selectOption/toggleCheckbox 儲存了 userAnswers[currentQuestionIndex]
+            // 直接進入下一題
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < questions.length) {
+                updateProgress();
+                showQuestion();
+                // 捲動回頂部
+                document.getElementById('question-container').scrollIntoView({ behavior: 'smooth' });
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            generateReport();
+        }
+
+        function generateReport() {
+            const reportContainer = document.getElementById('report-container');
+            reportContainer.innerHTML = '';
+            
+            let totalScore = 0;
+            
+            questions.forEach((q, idx) => {
+                const userAns = userAnswers[idx];
+                let isCorrect = false;
+                let userAnsText = "";
+                let correctAnsText = "";
+
+                // 判斷對錯及準備文字
+                if (q.type === 'checkbox') {
+                    // 多選題判斷
+                    const sortedUser = (userAns || []).sort().toString();
+                    const sortedCorrect = q.correctIndices.sort().toString();
+                    isCorrect = (sortedUser === sortedCorrect);
+                    
+                    userAnsText = (userAns || []).map(i => q.options[i]).join(", ") || "(未作答)";
+                    correctAnsText = q.correctIndices.map(i => q.options[i]).join(", ");
+
+                } else if (q.type === 'tf') {
+                    // 是非題
+                    // 0=True, 1=False based on previous options map
+                    // Correct answer in q.answer is boolean (true/false)
+                    // Map bool to index: true->0, false->1
+                    const correctIndex = q.answer ? 0 : 1;
+                    isCorrect = (userAns === correctIndex);
+                    
+                    const tfOptions = ["正確 (True)", "錯誤 (False)"];
+                    userAnsText = userAns !== null ? tfOptions[userAns] : "(未作答)";
+                    correctAnsText = tfOptions[correctIndex];
+
+                } else {
+                    // 單選
+                    isCorrect = (userAns === q.answer);
+                    userAnsText = userAns !== null ? (String.fromCharCode(65 + userAns) + ". " + q.options[userAns]) : "(未作答)";
+                    correctAnsText = String.fromCharCode(65 + q.answer) + ". " + q.options[q.answer];
+                }
+
+                if (isCorrect) totalScore += q.score;
+
+                // 建立報告卡片 HTML
+                const card = document.createElement('div');
+                card.className = `bg-white p-5 rounded-xl border-l-8 shadow-sm mb-4 ${isCorrect ? 'border-green-500' : 'border-red-500'}`;
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-gray-500 text-sm">第 ${idx + 1} 題 (${q.score}分)</span>
+                        <span class="text-2xl">${isCorrect ? '✅' : '❌'}</span>
+                    </div>
+                    <h3 class="font-bold text-gray-800 text-lg mb-3">${q.text}</h3>
+                    
+                    <div class="space-y-2 text-sm">
+                        <div class="flex">
+                            <span class="w-20 font-bold text-gray-500">你的答案：</span>
+                            <span class="${isCorrect ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}">${userAnsText}</span>
+                        </div>
+                        ${!isCorrect ? `
+                        <div class="flex">
+                            <span class="w-20 font-bold text-gray-500">正確答案：</span>
+                            <span class="text-green-600 font-bold">${correctAnsText}</span>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="mt-4 bg-blue-50 p-3 rounded-lg text-blue-800 text-sm">
+                        <strong>💡 解說：</strong> ${q.explanation}
+                    </div>
+                `;
+                reportContainer.appendChild(card);
+            });
+
+            // 動畫顯示分數
+            const finalScoreElement = document.getElementById('final-score');
+            let tempScore = 0;
+            const interval = setInterval(() => {
+                if (tempScore < totalScore) {
+                    tempScore++;
+                    finalScoreElement.innerText = tempScore;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 20);
+            finalScoreElement.innerText = totalScore; // 確保最終顯示正確
+
+            // 評語
+            const msgElem = document.getElementById('result-message');
+            if (totalScore === 100) msgElem.innerText = "太完美了！你是常識科狀元！🌟";
+            else if (totalScore >= 80) msgElem.innerText = "成績優異！繼續保持！🎉";
+            else if (totalScore >= 60) msgElem.innerText = "及格了！看來有些地方需要再溫習一下喔！📚";
+            else msgElem.innerText = "不要氣餒！看詳細報告檢討一下，下次會更好！💪";
+
+            if (totalScore === 100) createConfetti();
+        }
+
+        function restartQuiz() {
+            resultScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            document.querySelectorAll('.confetti').forEach(e => e.remove());
+            document.getElementById('student-name').value = '';
+        }
+
+        function createConfetti() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                document.body.appendChild(confetti);
+            }
+        }
+    </script>
+</body>
+</html>
