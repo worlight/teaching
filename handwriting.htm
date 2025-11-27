@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數位書法練習紙產生器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hachi+Maru+Pop&family=Klee+One:wght@400;600&family=Liu+Jian+Mao+Cao&family=Long+Cang&family=Ma+Shan+Zheng&family=Noto+Sans+TC:wght@400;700&family=Noto+Serif+TC:wght@400;700&family=ZCOOL+XiaoWei&family=Zhi+Mang+Xing&display=swap" rel="stylesheet">
+
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 0;
+        }
+        
+        body {
+            background-color: #f3f4f6;
+            -webkit-print-color-adjust: exact;
+            /* 避免觸控時的預設行為 (如下拉重新整理) */
+            overscroll-behavior: none;
+        }
+
+        /* 紙張樣式 */
+        .paper {
+            margin: 20px auto;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            position: relative;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            page-break-after: always;
+            overflow: hidden;
+            transition: all 0.3s;
+            /* 確保畫布定位準確 */
+            transform-style: preserve-3d; 
+        }
+
+        /* --- 紙張質感 --- */
+        .paper.texture-white { background-color: #fff; background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23cccccc' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E"); }
+        .paper.texture-rice { background-color: #fdfbf7; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E"); }
+        .paper.texture-vintage { background-color: #f3e9d2; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E"); }
+        .paper.texture-green { background-color: #eef7ee; background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='%23a5d6a7' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E"); }
+        .paper.texture-red { background-color: #d32f2f; background-image: url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h8v8H0z' fill='none'/%3E%3Cpath d='M0 0h2v2H0zm4 4h2v2H4z' fill='%239a0007' fill-opacity='0.1'/%3E%3C/svg%3E"); }
+
+        /* A4 尺寸 */
+        .paper.portrait { width: 210mm; height: 297mm; padding: 15mm 10mm; }
+        .paper.landscape { width: 297mm; height: 210mm; padding: 10mm 15mm; }
+
+        /* --- 格子容器 --- */
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            box-sizing: content-box;
+            border-top: 1px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+            /* 讓格子在畫布下方 */
+            position: relative;
+            z-index: 10; 
+        }
+        .grid-container.vertical-mode {
+            writing-mode: vertical-rl;
+            border-left: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color); 
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* --- 畫布層 (Canvas Layer) --- */
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20; /* 蓋在文字上面 */
+            pointer-events: none; /* 預設不攔截滑鼠，允許選取文字 */
+            touch-action: none; /* 禁止瀏覽器預設觸控行為 (如捲動) */
+        }
+        /* 當手繪模式開啟時，允許畫布接收事件 */
+        .drawing-mode .drawing-canvas {
+            pointer-events: auto;
+            cursor: crosshair;
+        }
+
+        /* --- 單個格子基礎樣式 --- */
+        .char-box {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        .grid-container.vertical-mode .char-box {
+            border-right: none; 
+            border-left: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            border-top: none;
+        }
+
+        /* --- 格線樣式 --- */
+        .char-box.grid-tian::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 0; border-top: 1px dashed var(--guide-color); opacity: 0.6; pointer-events: none; }
+        .char-box.grid-tian::after { content: ''; position: absolute; left: 50%; top: 0; height: 100%; width: 0; border-left: 1px dashed var(--guide-color); opacity: 0.6; pointer-events: none; }
+        .char-box.grid-mi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to right, transparent 49.5%, var(--guide-color) 49.5%, var(--guide-color) 50.5%, transparent 50.5%), linear-gradient(to bottom, transparent 49.5%, var(--guide-color) 49.5%, var(--guide-color) 50.5%, transparent 50.5%); opacity: 0.6; pointer-events: none; }
+        .char-box.grid-mi::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, transparent 49.5%, var(--guide-color) 49.5%, var(--guide-color) 50.5%, transparent 50.5%), linear-gradient(-45deg, transparent 49.5%, var(--guide-color) 49.5%, var(--guide-color) 50.5%, transparent 50.5%); opacity: 0.6; pointer-events: none; }
+        .char-box.grid-jiu::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to right, transparent 33%, var(--guide-color) 33%, var(--guide-color) 33.5%, transparent 33.5%, transparent 66.5%, var(--guide-color) 66.5%, var(--guide-color) 67%, transparent 67%), linear-gradient(to bottom, transparent 33%, var(--guide-color) 33%, var(--guide-color) 33.5%, transparent 33.5%, transparent 66.5%, var(--guide-color) 66.5%, var(--guide-color) 67%, transparent 67%); opacity: 0.6; pointer-events: none; }
+        
+        .grid-container.type-line { border-left: none; border-right: none; border-top: none; }
+        .char-box.type-line { border-left: none !important; border-right: none !important; border-top: none !important; border-bottom: 1px solid var(--border-color) !important; }
+        .grid-container.type-col { border-top: none; border-bottom: none; border-right: 1px solid var(--border-color); border-left: none; }
+        .char-box.type-col { border-top: none !important; border-bottom: none !important; border-right: none !important; border-left: 1px solid var(--border-color) !important; }
+        .grid-container.type-blank { border: none !important; }
+        .char-box.type-blank { border: none !important; }
+
+        .char-text { position: relative; z-index: 10; line-height: 1; user-select: none; pointer-events: none; }
+
+        /* 字體類別 */
+        .font-brush { font-family: 'Ma Shan Zheng', cursive; }
+        .font-pen { font-family: 'Zhi Mang Xing', cursive; }
+        .font-pencil { font-family: 'Long Cang', cursive; }
+        .font-cursive { font-family: 'Liu Jian Mao Cao', cursive; }
+        .font-xiaowei { font-family: 'ZCOOL XiaoWei', serif; } 
+        .font-klee { font-family: 'Klee One', cursive; } 
+        .font-pop { font-family: 'Hachi Maru Pop', cursive; } 
+        .font-sans { font-family: 'Noto Sans TC', sans-serif; }
+        .font-standard { font-family: 'Noto Serif TC', serif; }
+
+        .color-btn { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #e5e7eb; cursor: pointer; transition: transform 0.1s, border-color 0.1s; }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.active { border-color: #4f46e5; transform: scale(1.1); }
+
+        @media print {
+            body { background: none; }
+            .controls { display: none !important; }
+            #main-scroll-area { display: block !important; padding: 0 !important; margin: 0 !important; height: auto !important; min-height: 0 !important; overflow: visible !important; }
+            .paper { margin: 0 !important; box-shadow: none; page-break-after: always; }
+            .paper:last-child { page-break-after: auto; }
+            #paper-wrapper { width: 100%; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+    </style>
+    <style id="page-orientation-style">@page { size: A4 portrait; }</style>
+</head>
+<body class="text-gray-800">
+
+    <div class="controls fixed top-0 left-0 h-full w-80 bg-white shadow-xl p-6 overflow-y-auto transform transition-transform z-50 border-r border-gray-200 flex flex-col">
+        <h2 class="text-2xl font-bold mb-4 text-indigo-600 flex items-center flex-shrink-0">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            設定面板
+        </h2>
+
+        <!-- 手繪控制區 (置頂顯眼) -->
+        <div class="mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-100 flex-shrink-0">
+            <div class="flex justify-between items-center mb-2">
+                <span class="font-bold text-indigo-900 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    手繪模式
+                </span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="drawing-toggle" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                </label>
+            </div>
+            
+            <div id="drawing-controls" class="hidden space-y-3 transition-all duration-300">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">筆畫粗細: <span id="brush-size-display">5</span>px</label>
+                    <input type="range" id="brush-size" min="1" max="20" value="5" class="w-full h-1 bg-gray-300 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <button onclick="clearAllCanvases()" class="w-full py-1 px-2 bg-white border border-red-200 text-red-600 text-xs rounded hover:bg-red-50 flex items-center justify-center">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    清除所有筆跡
+                </button>
+                <p class="text-[10px] text-gray-500">*修改格式會自動清除筆跡</p>
+            </div>
+        </div>
+        
+        <div class="overflow-y-auto flex-grow pr-1 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">輸入文字</label>
+                <textarea id="input-text" rows="3" class="w-full p-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="在此輸入中文或英文...">你的話是我腳前的燈，是我路上的光。</textarea>
+            </div>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">紙張設定</label>
+                    <div class="flex space-x-2 bg-gray-100 p-1 rounded-md mb-2">
+                        <button id="btn-portrait" class="flex-1 py-1 text-xs rounded-md bg-white shadow text-indigo-600 font-medium transition" onclick="setOrientation('portrait')">直向</button>
+                        <button id="btn-landscape" class="flex-1 py-1 text-xs rounded-md text-gray-500 hover:text-indigo-600 transition" onclick="setOrientation('landscape')">橫向</button>
+                    </div>
+                    <select id="paper-select" class="w-full p-2 border border-gray-300 rounded-md text-sm">
+                        <option value="texture-white">標準 (雪白)</option>
+                        <option value="texture-rice">宣紙 (米黃)</option>
+                        <option value="texture-vintage">仿古 (泛黃)</option>
+                        <option value="texture-green">護眼 (淡綠)</option>
+                        <option value="texture-red">萬年紅 (喜慶)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">書寫方向</label>
+                    <div class="flex space-x-2 bg-gray-100 p-1 rounded-md">
+                        <button id="btn-dir-h" class="flex-1 py-1 text-xs rounded-md bg-white shadow text-indigo-600 font-medium transition" onclick="setDirection('horizontal')">橫書 (左→右)</button>
+                        <button id="btn-dir-v" class="flex-1 py-1 text-xs rounded-md text-gray-500 hover:text-indigo-600 transition" onclick="setDirection('vertical')">直書 (上→下)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">格線樣式</label>
+                <select id="grid-type-select" class="w-full p-2 border border-gray-300 rounded-md text-sm font-medium text-indigo-900 bg-indigo-50 border-indigo-200">
+                    <option value="grid-tian">田字格 (標準練習)</option>
+                    <option value="grid-mi">米字格 (進階結構)</option>
+                    <option value="grid-jiu">九宮格 (臨帖專用)</option>
+                    <option value="grid-square">方格 (僅外框)</option>
+                    <option value="type-line">橫線 (單行稿/作文)</option>
+                    <option value="type-col">直條 (直行稿/詩詞)</option>
+                    <option value="type-blank">空白 (無格線)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">筆跡風格</label>
+                <select id="font-select" class="w-full p-2 border border-gray-300 rounded-md text-sm">
+                    <option value="font-brush">毛筆 (馬善政體)</option>
+                    <option value="font-xiaowei">行楷 (站酷小薇)</option>
+                    <option value="font-pen">鋼筆 (行書)</option>
+                    <option value="font-klee">硬筆 (教科書體)</option>
+                    <option value="font-pencil">鉛筆 (草寫)</option>
+                    <option value="font-cursive">狂草 (流健毛草)</option>
+                    <option value="font-pop">可愛 (波普體)</option>
+                    <option value="font-standard">標準 (明體)</option>
+                    <option value="font-sans">現代 (黑體)</option>
+                </select>
+            </div>
+
+            <div class="space-y-4 border-t border-b border-gray-100 py-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">文字/畫筆顏色</label>
+                    <div class="flex items-center space-x-2" id="text-color-group">
+                        <button class="color-btn active" data-color="#000000" style="background-color: #000000;" title="墨黑"></button>
+                        <button class="color-btn" data-color="#cc0000" style="background-color: #cc0000;" title="硃砂紅"></button>
+                        <button class="color-btn" data-color="#003399" style="background-color: #003399;" title="鋼筆藍"></button>
+                        <button class="color-btn" data-color="#555555" style="background-color: #555555;" title="鉛筆灰"></button>
+                        <div class="relative w-8 h-8 ml-2">
+                             <input type="color" id="text-color-picker" value="#000000" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+                             <div class="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center bg-white"><span class="text-xs text-gray-500">+</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">格線顏色</label>
+                    <div class="flex items-center space-x-2" id="border-color-group">
+                        <button class="color-btn active" data-color="#dc2626" style="background-color: #dc2626;" title="標準紅"></button>
+                        <button class="color-btn" data-color="#000000" style="background-color: #000000;" title="黑框"></button>
+                        <button class="color-btn" data-color="#16a34a" style="background-color: #16a34a;" title="綠框"></button>
+                        <button class="color-btn" data-color="#999999" style="background-color: #999999;" title="鉛筆灰框"></button>
+                        <div class="relative w-8 h-8 ml-2">
+                             <input type="color" id="border-color-picker" value="#dc2626" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+                             <div class="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center bg-white"><span class="text-xs text-gray-500">+</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">輔助線顏色</label>
+                    <div class="flex items-center space-x-2" id="guide-color-group">
+                        <button class="color-btn active" data-color="#fca5a5" style="background-color: #fca5a5;"></button>
+                        <button class="color-btn" data-color="#d1d5db" style="background-color: #d1d5db;"></button>
+                        <button class="color-btn" data-color="#bfdbfe" style="background-color: #bfdbfe;"></button>
+                         <div class="relative w-8 h-8 ml-2">
+                             <input type="color" id="guide-color-picker" value="#fca5a5" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+                             <div class="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center bg-white"><span class="text-xs text-gray-500">+</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">格子大小: <span id="size-display">80</span>px</label>
+                <input type="range" id="grid-size" min="40" max="130" value="80" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+        </div>
+        
+        <div class="mt-auto pt-4 flex-shrink-0">
+            <button onclick="window.print()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded transition flex items-center justify-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                列印 / 另存 PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="pl-80 print:pl-0 min-h-screen flex flex-col items-center justify-start pt-10 print:pt-0 bg-gray-50 print:bg-white pb-20 print:pb-0" id="main-scroll-area">
+        <div id="paper-wrapper"></div>
+    </div>
+
+    <div id="measure-paper" class="paper portrait texture-white" style="position: absolute; top: -9999px; visibility: hidden;"></div>
+
+    <script>
+        const state = {
+            textColor: '#000000',
+            borderColor: '#dc2626',
+            guideColor: '#fca5a5',
+            orientation: 'portrait',
+            paperTexture: 'texture-white',
+            direction: 'horizontal',
+            gridType: 'grid-tian',
+            isDrawing: false,
+            brushSize: 5
+        };
+
+        const elements = {
+            input: document.getElementById('input-text'),
+            font: document.getElementById('font-select'),
+            paper: document.getElementById('paper-select'),
+            gridSize: document.getElementById('grid-size'),
+            sizeDisplay: document.getElementById('size-display'),
+            wrapper: document.getElementById('paper-wrapper'),
+            measure: document.getElementById('measure-paper'),
+            pageStyle: document.getElementById('page-orientation-style'),
+            gridType: document.getElementById('grid-type-select'),
+            btnDirH: document.getElementById('btn-dir-h'),
+            btnDirV: document.getElementById('btn-dir-v'),
+            // Drawing controls
+            drawingToggle: document.getElementById('drawing-toggle'),
+            drawingControls: document.getElementById('drawing-controls'),
+            brushSize: document.getElementById('brush-size'),
+            brushSizeDisplay: document.getElementById('brush-size-display')
+        };
+
+        // --- Drawing Logic ---
+        elements.drawingToggle.addEventListener('change', (e) => {
+            state.isDrawing = e.target.checked;
+            if (state.isDrawing) {
+                elements.drawingControls.classList.remove('hidden');
+                document.body.classList.add('drawing-mode');
+            } else {
+                elements.drawingControls.classList.add('hidden');
+                document.body.classList.remove('drawing-mode');
+            }
+        });
+
+        elements.brushSize.addEventListener('input', (e) => {
+            state.brushSize = parseInt(e.target.value);
+            elements.brushSizeDisplay.textContent = state.brushSize;
+        });
+
+        window.clearAllCanvases = function() {
+            const canvases = document.querySelectorAll('canvas.drawing-canvas');
+            canvases.forEach(canvas => {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+        };
+
+        function setupCanvas(canvas) {
+            const ctx = canvas.getContext('2d');
+            let isPainting = false;
+
+            function startPosition(e) {
+                if (!state.isDrawing) return;
+                isPainting = true;
+                draw(e);
+            }
+
+            function finishedPosition() {
+                isPainting = false;
+                ctx.beginPath();
+            }
+
+            function draw(e) {
+                if (!isPainting || !state.isDrawing) return;
+                
+                // Get correct mouse position relative to canvas
+                const rect = canvas.getBoundingClientRect();
+                let clientX, clientY;
+                
+                if (e.type.includes('touch')) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                } else {
+                    clientX = e.clientX;
+                    clientY = e.clientY;
+                }
+
+                // Consider scaling
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                const x = (clientX - rect.left) * scaleX;
+                const y = (clientY - rect.top) * scaleY;
+
+                ctx.lineWidth = state.brushSize;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = state.textColor; // Use selected text color
+
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            }
+
+            // Mouse events
+            canvas.addEventListener('mousedown', startPosition);
+            canvas.addEventListener('mouseup', finishedPosition);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseleave', finishedPosition); // Stop drawing if leaves canvas
+
+            // Touch events
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startPosition(e); });
+            canvas.addEventListener('touchend', finishedPosition);
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+        }
+
+
+        // --- Existing Logic ---
+
+        window.setDirection = function(dir) {
+            state.direction = dir;
+            if (dir === 'horizontal') {
+                elements.btnDirH.className = "flex-1 py-1 text-xs rounded-md bg-white shadow text-indigo-600 font-medium transition";
+                elements.btnDirV.className = "flex-1 py-1 text-xs rounded-md text-gray-500 hover:text-indigo-600 transition";
+            } else {
+                elements.btnDirH.className = "flex-1 py-1 text-xs rounded-md text-gray-500 hover:text-indigo-600 transition";
+                elements.btnDirV.className = "flex-1 py-1 text-xs rounded-md bg-white shadow text-indigo-600 font-medium transition";
+            }
+            render();
+        };
+
+        window.setOrientation = function(orientation) {
+            state.orientation = orientation;
+            const btnP = document.getElementById('btn-portrait');
+            const btnL = document.getElementById('btn-landscape');
+            
+            if (orientation === 'portrait') {
+                btnP.className = "flex-1 py-1 text-xs rounded-md bg-white shadow text-indigo-600 font-medium transition";
+                btnL.className = "flex-1 py-1 text-xs rounded-md text-gray-500 hover:text-indigo-600 transition";
+                elements.pageStyle.innerHTML = "@page { size: A4 portrait; }";
+                elements.measure.classList.remove('landscape'); elements.measure.classList.add('portrait');
+            } else {
+                btnP.className = "flex-1 py-1 text-xs rounded-md text-gray-500 hover:text-indigo-600 transition";
+                btnL.className = "flex-1 py-1 text-xs rounded-md bg-white shadow text-indigo-600 font-medium transition";
+                elements.pageStyle.innerHTML = "@page { size: A4 landscape; }";
+                elements.measure.classList.remove('portrait'); elements.measure.classList.add('landscape');
+            }
+            render();
+        };
+
+        function setupColorGroup(groupId, pickerId, stateKey) {
+            const group = document.getElementById(groupId);
+            const buttons = group.querySelectorAll('.color-btn');
+            const picker = document.getElementById(pickerId);
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    state[stateKey] = e.target.dataset.color;
+                    picker.value = state[stateKey];
+                    render(); // Render re-creates canvas, clearing drawing
+                });
+            });
+            picker.addEventListener('input', (e) => {
+                buttons.forEach(b => b.classList.remove('active'));
+                state[stateKey] = e.target.value;
+                render();
+            });
+        }
+        setupColorGroup('text-color-group', 'text-color-picker', 'textColor');
+        setupColorGroup('border-color-group', 'border-color-picker', 'borderColor');
+        setupColorGroup('guide-color-group', 'guide-color-picker', 'guideColor');
+
+        function createBox(content, size, fontSize, fontClass) {
+            const box = document.createElement('div');
+            box.className = `char-box ${fontClass} ${state.gridType}`;
+            box.style.width = `${size}px`;
+            box.style.height = `${size}px`;
+            box.style.color = state.textColor;
+            
+            if (content) {
+                const span = document.createElement('span');
+                span.className = 'char-text';
+                span.textContent = content;
+                span.style.fontSize = `${fontSize}px`;
+                box.appendChild(span);
+            }
+            return box;
+        }
+
+        function createNewPage(widthStyle) {
+            const page = document.createElement('div');
+            page.className = `paper ${state.orientation} ${state.paperTexture}`;
+            
+            // Add drawing canvas
+            const canvas = document.createElement('canvas');
+            canvas.className = 'drawing-canvas';
+            // Important: Set explicit width/height in pixels for canvas to work correctly
+            // We use a small delay or calculated size to ensure it matches the page
+            // Since A4 size is fixed in CSS (210mm etc), we can use offsetWidth after append, 
+            // or assume standard DPI. Let's rely on offsetWidth after append.
+            page.appendChild(canvas);
+
+            const container = document.createElement('div');
+            let containerClass = `grid-container ${state.gridType}`;
+            if (state.direction === 'vertical') {
+                containerClass += ' vertical-mode';
+            }
+            
+            container.className = containerClass;
+            container.style.width = widthStyle;
+            
+            page.appendChild(container);
+            elements.wrapper.appendChild(page);
+
+            // Init canvas size
+            // We use a high multiplier for better print quality (e.g., 2)
+            const dpr = window.devicePixelRatio || 1;
+            const rect = page.getBoundingClientRect();
+            // Using offsetWidth from the DOM element directly
+            canvas.width = page.offsetWidth;
+            canvas.height = page.offsetHeight;
+            
+            setupCanvas(canvas);
+
+            return container;
+        }
+
+        function render() {
+            elements.wrapper.innerHTML = '';
+            
+            const text = elements.input.value;
+            const size = parseInt(elements.gridSize.value);
+            const fontSize = Math.floor(size * 0.75);
+            const fontClass = elements.font.value;
+            
+            state.paperTexture = elements.paper.value;
+            state.gridType = elements.gridType.value;
+            elements.sizeDisplay.textContent = size;
+
+            document.documentElement.style.setProperty('--border-color', state.borderColor);
+            document.documentElement.style.setProperty('--guide-color', state.guideColor);
+
+            const computedStyle = window.getComputedStyle(elements.measure);
+            const pW = elements.measure.clientWidth - parseFloat(computedStyle.paddingLeft) - parseFloat(computedStyle.paddingRight);
+            const pH = elements.measure.clientHeight - parseFloat(computedStyle.paddingTop) - parseFloat(computedStyle.paddingBottom);
+            
+            const cols = Math.floor(pW / size);
+            const rows = Math.floor(pH / size);
+            
+            let totalCellsPerPage, containerWidthStyle;
+            let lineCapacity, linesPerPage;
+
+            if (state.direction === 'horizontal') {
+                totalCellsPerPage = cols * rows;
+                containerWidthStyle = `${cols * size}px`;
+                lineCapacity = cols;
+            } else {
+                totalCellsPerPage = cols * rows;
+                containerWidthStyle = `${cols * size}px`;
+                lineCapacity = rows;
+            }
+
+            let currentContainer = createNewPage(containerWidthStyle);
+            let currentCellCount = 0;
+            let currentLineCount = 0;
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (currentCellCount >= totalCellsPerPage) {
+                    currentContainer = createNewPage(containerWidthStyle);
+                    currentCellCount = 0;
+                    currentLineCount = 0;
+                }
+
+                if (char === '\n') {
+                    const remainingInLine = lineCapacity - currentLineCount;
+                    for (let j = 0; j < remainingInLine; j++) {
+                        if (currentCellCount >= totalCellsPerPage) {
+                             currentContainer = createNewPage(containerWidthStyle);
+                             currentCellCount = 0;
+                             currentLineCount = 0;
+                        }
+                        currentContainer.appendChild(createBox('', size, fontSize, fontClass));
+                        currentCellCount++;
+                    }
+                    currentLineCount = 0;
+                } else {
+                    currentContainer.appendChild(createBox(char, size, fontSize, fontClass));
+                    currentCellCount++;
+                    currentLineCount++;
+                    if (currentLineCount >= lineCapacity) {
+                        currentLineCount = 0;
+                    }
+                }
+            }
+
+            while (currentCellCount < totalCellsPerPage) {
+                currentContainer.appendChild(createBox('', size, fontSize, fontClass));
+                currentCellCount++;
+            }
+        }
+
+        const inputs = [elements.input, elements.font, elements.gridSize, elements.paper, elements.gridType];
+        inputs.forEach(input => input.addEventListener('input', render));
+        window.addEventListener('resize', render);
+        document.fonts.ready.then(render);
+        
+        // Initial render
+        render();
+    </script>
+</body>
+</html>
