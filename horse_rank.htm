@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>水墨奔騰迎錦泰</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            font-family: 'Noto Serif TC', serif;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #fdfbf7;
+            background-image: radial-gradient(#e6e6e6 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(253, 251, 247, 0.95);
+            z-index: 10;
+            text-align: center;
+            transition: opacity 0.3s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .ink-title {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 5rem; 
+            color: #2c2c2c;
+            margin: 0 0 20px 0;
+            white-space: nowrap;
+        }
+
+        @media (min-width: 768px) {
+            .ink-title { font-size: 5.5rem; }
+        }
+
+        .ink-char {
+            display: inline-block;
+            opacity: 0;
+            transform-origin: center bottom;
+            animation: brush-stroke 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        @keyframes brush-stroke {
+            0% { opacity: 0; transform: scale(1.5) translateY(-10px) rotate(-5deg); filter: blur(8px); }
+            60% { opacity: 1; filter: blur(2px); }
+            100% { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); filter: blur(0); }
+        }
+
+        .ink-char:nth-child(1) { animation-delay: 0.1s; }
+        .ink-char:nth-child(2) { animation-delay: 0.25s; }
+        .ink-char:nth-child(3) { animation-delay: 0.40s; }
+        .ink-char:nth-child(4) { animation-delay: 0.55s; }
+        .ink-char:nth-child(5) { animation-delay: 0.70s; }
+        .ink-char:nth-child(6) { animation-delay: 0.85s; }
+        .ink-char:nth-child(7) { animation-delay: 1.00s; }
+
+        h2 {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 3rem;
+            color: #8b0000;
+            margin: 10px 0;
+        }
+
+        p {
+            font-size: 1.2rem;
+            color: #4a4a4a;
+            margin: 5px 0;
+            max-width: 90%;
+        }
+
+        .input-group {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 80%;
+            max-width: 300px;
+            animation: fade-in 0.8s ease-out 1.2s forwards;
+            opacity: 0;
+        }
+
+        select {
+            padding: 10px 15px;
+            font-size: 1.2rem;
+            font-family: 'Noto Serif TC', serif;
+            border: 2px solid #555;
+            border-radius: 8px;
+            background-color: #fff;
+            color: #333;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right .7em top 50%;
+            background-size: .65em auto;
+        }
+
+        select:disabled {
+            background-color: #e0e0e0;
+            color: #999;
+            border-color: #ccc;
+        }
+
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+            margin-top: 30px;
+            opacity: 0;
+            animation: fade-in 0.8s ease-out 1.4s forwards;
+        }
+
+        .btn {
+            padding: 15px 50px;
+            font-size: 2rem;
+            font-family: 'Ma Shan Zheng', cursive;
+            background-color: #8b0000;
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+            min-width: 200px;
+        }
+
+        .btn-secondary {
+            padding: 10px 30px;
+            font-size: 1.5rem;
+            font-family: 'Ma Shan Zheng', cursive;
+            background-color: #555;
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .btn:active, .btn-secondary:active {
+            transform: scale(0.95);
+        }
+
+        .idiom-box {
+            background: #fff;
+            border: 2px solid #2c2c2c;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 5px 5px 0px #2c2c2c;
+        }
+
+        #score-display {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 3.5rem;
+            font-family: 'Ma Shan Zheng', cursive;
+            color: #2c2c2c;
+            z-index: 5;
+            pointer-events: none;
+            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.6);
+        }
+
+        #player-name-display {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 3.5rem; 
+            color: #1a1a1a; 
+            opacity: 0.85;
+            pointer-events: none;
+            z-index: 1; 
+            text-shadow: 
+                2px 2px 0px rgba(220, 220, 220, 0.8), 
+                0 0 4px rgba(0,0,0,0.1),
+                0 0 10px rgba(0,0,0,0.05);
+            animation: breathe 5s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(1); opacity: 0.85; filter: blur(0.5px); }
+            50% { transform: scale(1.03); opacity: 1; filter: blur(0px); }
+            100% { transform: scale(1); opacity: 0.85; filter: blur(0.5px); }
+        }
+
+        .seal {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            width: 80px;
+            height: 80px;
+            border: 3px solid #8b0000;
+            color: #8b0000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 1.2rem;
+            border-radius: 4px;
+            writing-mode: vertical-rl;
+            z-index: 5;
+            opacity: 0.8;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        #img-status {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1rem;
+            color: #888;
+            pointer-events: none;
+            text-align: right;
+        }
+
+        #leaderboard-layer {
+            background: rgba(253, 251, 247, 0.98);
+        }
+
+        .leaderboard-container {
+            width: 90%;
+            max-width: 500px;
+            height: 60vh;
+            background: #fff;
+            border: 3px solid #2c2c2c;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 2px solid #2c2c2c;
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 1.5rem;
+            color: #555;
+            background: #f0f0f0;
+        }
+
+        .leaderboard-item {
+            font-family: 'Noto Serif TC', serif;
+            font-size: 1.2rem;
+            padding: 12px 10px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .leaderboard-item:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .rank-1 .rank-num { color: #f1c40f; font-size: 1.5rem; text-shadow: 1px 1px 0px #b8860b; }
+        .rank-2 .rank-num { color: #95a5a6; font-size: 1.4rem; text-shadow: 1px 1px 0px #7f8c8d; }
+        .rank-3 .rank-num { color: #cd7f32; font-size: 1.3rem; text-shadow: 1px 1px 0px #a0522d; }
+
+        .rank-num { font-weight: bold; width: 40px; text-align: center; font-family: 'Ma Shan Zheng', cursive; }
+        .rank-name { flex-grow: 1; padding-left: 10px; }
+        .rank-score { font-weight: bold; color: #d62828; }
+
+        .clear-btn { background: none; border: none; color: #999; font-size: 0.8rem; margin-top: 5px; cursor: pointer; text-decoration: underline; }
+
+        @media (max-width: 768px) {
+            .ink-title { font-size: 2.8rem; }
+            h2 { font-size: 2rem; }
+            p { font-size: 1rem; }
+            .btn { font-size: 1.5rem; padding: 10px 30px; }
+            #score-display { font-size: 2.5rem; }
+            #player-name-display { font-size: 2rem; bottom: 70px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div class="seal">中華<br>文化</div>
+        <div id="score-display">距離: 0 米</div>
+        <div id="player-name-display"></div>
+        <div id="img-status">圖片狀態: 檢查中...</div>
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="start-screen" class="ui-layer">
+            <h1 class="ink-title">
+                <span class="ink-char">水</span>
+                <span class="ink-char">墨</span>
+                <span class="ink-char">奔</span>
+                <span class="ink-char">騰</span>
+                <span class="ink-char">迎</span>
+                <span class="ink-char">錦</span>
+                <span class="ink-char">泰</span>
+            </h1>
+            
+            <div class="input-group">
+                <select id="class-select"><option value="" disabled selected>請選擇班別</option></select>
+                <select id="student-select" disabled><option value="" disabled selected>請選擇姓名</option></select>
+                <select id="bg-select">
+                    <option value="" selected>隨機背景 (預設)</option>
+                    <option value="sunny">晴空萬里</option>
+                    <option value="rain">煙雨濛濛</option>
+                    <option value="snow">冬日飄雪</option>
+                    <option value="night">月夜流螢</option>
+                    <option value="autumn">秋風落葉</option>
+                </select>
+            </div>
+
+            <p style="margin-top: 20px;">點擊畫面或按空白鍵跳躍，避開障礙！</p>
+            <p style="font-size: 1.2rem; color: #d62828; font-weight: bold; margin-top:5px;">🔥 最後50米極限考驗</p>
+            
+            <div class="btn-container">
+                <button class="btn" onclick="startGame()">開始奔馳</button>
+                <button class="btn-secondary" onclick="showLeaderboard()">🏆 查看排行榜</button>
+            </div>
+        </div>
+
+        <div id="end-screen" class="ui-layer hidden">
+            <h2 id="end-title">馬到功成</h2>
+            <p id="end-score">奔跑距離：計算中...</p> 
+            <div class="idiom-box">
+                <strong id="idiom-text" style="font-size: 1.8rem; display:block; margin-bottom:10px;">龍馬精神</strong>
+                <span id="idiom-desc" style="font-size: 1rem;">形容精神健旺、充沛。</span>
+            </div>
+            <div class="btn-container">
+                <button class="btn" onclick="resetGame()">再玩一次</button>
+                <button class="btn-secondary" onclick="showLeaderboard()">🏆 查看排行榜</button>
+            </div>
+        </div>
+
+        <div id="leaderboard-layer" class="ui-layer hidden">
+            <h2>🏆 排行榜</h2>
+            <p style="margin-bottom: 10px;">誰是真正的千里馬？</p>
+            <div class="leaderboard-container">
+                <div class="leaderboard-header">
+                    <span>排名</span>
+                    <span>姓名</span>
+                    <span>距離</span>
+                </div>
+                <div id="leaderboard-list"><div style='text-align:center; padding:20px; color:#888;'>載入中...</div></div>
+            </div>
+            <button class="btn" onclick="closeLeaderboard()">返回</button>
+            <button class="clear-btn" onclick="clearLeaderboard()">清除記錄 (教師用)</button>
+        </div>
+    </div>
+
+    <!-- 主要遊戲邏輯 (標準 Script，確保離線可用) -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let canvasWidth, canvasHeight;
+        let groundHeight;
+        let isPlaying = false;
+        let gameFrame = 0;
+        let score = 0;
+        let speed = 11; 
+        const targetScore = 500;
+        let speedMultiplier = 1;
+        let rushStage = 0; 
+        let finishLine = null; 
+        let currentPlayerName = ""; 
+        let horse;
+        let obstacles = [];
+        let particles = [];
+        let confettiParticles = [];
+        let background;
+        let weatherSystem;
+        let animationId;
+        let spawnTimer = 0;
+        let lastTime = 0;
+
+        // 預設的本地儲存介面 (會被雲端模組覆蓋)
+        window.useCloud = false; // 標記是否使用雲端
+        window.saveRecordFunc = function(name, distance) {
+            let records = JSON.parse(localStorage.getItem('horseGame_leaders') || '[]');
+            records.push({ name: name, score: distance, timestamp: new Date().toISOString() });
+            records.sort((a, b) => b.score - a.score);
+            if(records.length > 50) records = records.slice(0, 50);
+            localStorage.setItem('horseGame_leaders', JSON.stringify(records));
+        };
+        
+        window.renderLeaderboard = function(records) {
+            const listContainer = document.getElementById('leaderboard-list');
+            records.sort((a, b) => b.score - a.score);
+            records = records.slice(0, 50);
+            let html = "";
+            if (records.length === 0) {
+                html = "<div style='text-align:center; padding:20px; color:#888;'>暫無記錄</div>";
+            } else {
+                records.forEach((rec, index) => {
+                    let rankClass = "";
+                    if (index === 0) rankClass = "rank-1"; if (index === 1) rankClass = "rank-2"; if (index === 2) rankClass = "rank-3";
+                    html += `<div class="leaderboard-item ${rankClass}"><span class="rank-num">${index + 1}</span><span class="rank-name">${rec.name || "無名氏"}</span><span class="rank-score">${rec.score} 米</span></div>`;
+                });
+            }
+            listContainer.innerHTML = html;
+        };
+
+        window.showLeaderboardFunc = function() {
+            const records = JSON.parse(localStorage.getItem('horseGame_leaders') || '[]');
+            window.renderLeaderboard(records);
+        };
+        
+        window.clearLeaderboardFunc = function() {
+            localStorage.removeItem('horseGame_leaders');
+            alert("已清除本機記錄");
+            window.renderLeaderboard([]);
+        };
+
+        // 學生資料
+        const studentDB = {
+            "1A": ["1 陳熹雋","2 陳意衡","3 陳彥君","4 陳楚皓","5 陳彥羲","6 侯林菲","7 許皓琳","8 黃煜軒","9 關旨荇","10 劉卓瀅","11 劉仲宇","12 羅卓熙","13 李芯悦","14 呂俊霖","15 呂仲軒","16 吳諾兒","17 彭梓悦","18 施鈞源","19 孫子豪","20 曾以仁","21 曹正","22 王天宇","23 王柏諾","24 胡悦翹"],
+            "1B": ["1 陳曉瑩","2 陳梓韜","3 陳永昇","4 陳悅心","5 張峻烽","6 蔡宏鑫","7 朱灝喆","8 何允恒","9 韓欣穎","10 叶宇恒","11 江泳琳","12 關明菲","13 鄺雪晴","14 劉芊汝","15 羅復希","16 李俊霆","17 李鎧","18 梁凱淇","19 巫恒逸","20 柯芷晴","21 蘇智泓","22 曾鋭彬","23 尹梓言","24 胡梓榣","25 丘文博","26 朱鑠穎"],
+            "1C": ["1 歐陽子朗","2 周柏橋","3 鄭浚東","4 張洛頤","5 張允謙","6 朱善鋐","7 洪永灃","8 葉愷晴","9 江澤楷","10 江泳婷","11 郭曉靜","12 林芊玥","13 劉子儀","14 李卓諾","15 李柏翱","16 梁心巧","17 梁逸熹","18 危逸辰","19 潘承鈞","20 蕭雨彤","21 譚愷瑤","22 譚丞竣","23 田晞潼","24 王樂澄","25 黃子軒","26 王梓然","27 葉芷晴"],
+            "1D": ["1 陳振軒","2 陳晞","3 陳柏熹","4 陳宏信","5 張睎童","6 周羲和","7 徐朗睎","8 方俊熹","9 方梓喬","10 江徽","11 郭又嘉","12 劉淳浠","13 梁靖堯","14 李祉諾","15 林詩穎","16 廖心瑜","17 盧曉怡","18 顏孝善","19 鄧先喻","20 鄧芷珺","21 謝泓泰","22 童衍嘉","23 黃煦昡","24 吳嘉鋭","25 楊善雯","26 姚芊語"],
+            "1E": ["1 陳希霖","2 陳晞瑜","3 陳君業","4 陳溰琳","5 陳星宇","6 鄭子榆","7 馮晞童","8 何鉦霆","9 許正翹","10 郭柏希","11 郭柏喬","12 林嘉慧","13 羅敏芫","14 梁天豪","15 連尉𧧽","16 盧心怡","17 勞以曈","18 莫彥博","19 潘柏皓","20 鄧雨晴","21 蔡竣軒","22 黃晉謙","23 黃詩淇","24 胡凱藍","25 顏嘉希","26 楊樂軒"],
+            "2A": ["1 陳信希","2 陳宥銘","3 鄒嘉柔","4 鄭雅之","5 張予寧","6 馮朗華","7 何旻蔚","8 何梓嫣","9 許若楠","10 林捷然","11 林陽曦","12 李卓斐","13 梁昊","14 梁凱媃","15 廖凱漩","16 勞君婷","17 馬鉦博","18 伍灝然","19 蕭玥呈","20 曾恩陶","21 王祐辰","22 黃玳嘉","23 黃彥熹","24 楊旻彧","25 葉芷藴"],
+            "2B": ["1 陳雋禮","2 陳柏霖","3 陳瑋楠","4 陳穎澄","5 鄭皓文","6 張峻僑","7 錢玟謙","8 鍾振耀","9 何籽齊","10 何芷奷","11 林允兒","12 劉星宇","13 李晞雒","14 李芯潁","15 梁雅兒","16 梁心怡","17 盧靖方","18 麥雅淇","19 吳家賢","20 孫鎧霖","21 曾夢歡","22 黃梓朗","23 謝樂懿","24 嚴敏瑜","25 余芊潼"],
+            "2C": ["1 陳家博","2 陳佰僑","3 陳楚伊","4 鄭懿睿","5 張芷僑","6 張日曦","7 蔡子言","8 朱晉賢","9 朱詠珊","10 鍾禮賢","11 侯佩兒","12 管諾賢","13 郭昊洋","14 黎子謙","15 劉昊均","16 劉浚鋐","17 李諾頤","18 梁琋雯","19 林新珊","20 劉梓潼","21 吳綽瀅","22 譚紫寧","23 王羨妤","24 黃庭謙","25 鍾浩鈱"],
+            "2D": ["1 區晉樑","2 陳瀞希","3 陳凱淳","4 陳鎧賢","5 張鈞琳","6 馮凱琳","7 林雅雯","8 林蔣沂","9 劉玥澄","10 羅浩言","11 李溵喬","12 梁澤仁","13 李靖頤","14 林烱烽","15 呂綽瑤","16 毛羿巽","17 吳憲峰","18 石芮霖","19 曾禮賢","20 王儒悦","21 胡錦天","22 王暟瞳","23 胡梓筠","24 伍彥潮","25 余思穎"],
+            "2E": ["1 歐希彤","2 陳梓昊","3 陳芷琳","4 張司宇","5 張煒傑","6 張恩僑","7 趙浩軒","8 戴嘉瑩","9 嚴崇灝","10 葉文晞","11 黎爾澄","12 黎爾謙","13 梁栢睿","14 李依娜","15 連珝㞩","16 巫倬鋒","17 戴晞然","18 譚竣軒","19 鄧康瑤","20 黃千睿","21 黃寶儀","22 黃梓謙","23 吳妤諳","24 葉美琳","25 朱晨曦"],
+            "3A": ["1 陳家淳","2 張薾晨","3 張景軒","4 何沛靈","5 何韻瀅","6 關羨錤","7 林善瑩","8 李朗棋","9 李庭欣","10 梁可榆","11 林雅婷","12 吳智琛","13 吳愷恩","14 吳葉恆","15 歐航瑋","16 蘇逸朗","17 施善文","18 唐婉宜","19 曾卓謙","20 黃頌謙","21 王煦霖","22 黃贊殷","23 黃一陽","24 胡蓁翹","25 余沛凝"],
+            "3B": ["1 陳浠婷","2 陳灝斌","3 張樾","4 蔡海澄","5 周望舒","6 鄧渲穎","7 熊梓喬","8 關詠琳","9 黎熙桐","10 林柏宇","11 劉瀰","12 劉柏希","13 梁語軒","14 馬熙雯","15 吳思言","16 彭映雪","17 潘朗楷","18 黃覓颻","19 黃小洹","20 黃天信","21 王梓謙","22 王梓穎","23 胡凱澄","24 邱彥楟","25 葉栢廷"],
+            "3C": ["1 陳逸朗","2 張允嵐","3 莊鎧溢","4 馮卓賢","5 郭睿捷","6 簡芷桐","7 林善晴","8 林紫堯","9 劉睿軒","10 李祉誼","11 連信言","12 廖望正","13 羅啟晉","14 蕭梓淇","15 孫苡澄","16 施靜嵐","17 鄧允然","18 曾天佑","19 王煦霆","20 黃家熙","21 胡善之","22 楊樂昕","23 葉愷晴","24 葉蘊瑤","25 庾凱舒"],
+            "3D": ["1 陳晉燊","2 陳思霖","3 鍾俊賢","4 戴沛銘","5 何韻妍","6 黎允皓","7 黎昕潼","8 林心賢","9 李紫盈","10 梁澤栩","11 梁詩諾","12 梁圓圓","13 連家晴","14 林晴嵐","15 陸穎琳","16 龍允澄","17 顏沛怡","18 潘景康","19 潘睿晞","20 施澤仁","21 戴焯言","22 杜國維","23 黃子俊","24 楊靖泓","25 楊心蕊"],
+            "3E": ["1 查奕森","2 陳詠芯","3 陳殷霆","4 陳雨晴","5 周穎熙","6 鄭芷瀅","7 張閔程","8 霍柏彥","9 葉亦翔","10 黎昕澄","11 利卓羽","12 李芊澄","13 梁卓謙","14 李俊賢","15 李凱澄","16 羅德蔚","17 吳泳姸","18 潘承耀","19 譚沛林","20 黃頌然","21 胡旻慧","22 胡嘉濠","23 楊靖","24 鄭雅予"],
+            "4A": ["1 陳卓瑩","2 陳信佑","3 陳靖欣","4 鄭多宏","5 張綽祐","6 朱沛翹","7 方梓晴","8 康柏熙","9 許珮筠","10 許紫桐","11 洪鎮堯","12 簡希而","13 林泳桐","14 李淽玥","15 李廷熙","16 梁家浠","17 陸思慧","18 梁澤琛","19 麥梓琳","20 吳子睿","21 柯溍貽","22 潘奕匡","23 潘奕霖","24 湯梓峰","25 黃知恩","26 黃浚銘","27 吳婧言","28 吳婧煊","29 吳思博","30 余孝賢","31 袁浚熙"],
+            "4B": ["1 陳奕廷","2 鄭朗軒","3 張渼偲","4 張子浩","5 賀致堯","6 何旻蒑","7 許皓泓","8 林奕仲","9 林玥瑩","10 劉映汝","11 羅瑋霖","12 李瑋澄","13 梁景熹","14 梁詠欣","15 梁漪桓","16 李樂懿","17 梁恩浠","18 羅鎧晴","19 呂清妍","20 馬昊燊","21 湯鎮銘","22 田晞樂","23 唐嘉禧","24 尹樂恩","25 王梓琪","26 王熙雯","27 王汶僖","28 吳子朗","29 邱家樂","30 邱彥竣","31 楊子渘"],
+            "4C": ["1 陳見之","2 陳樂熙","3 錢巧霖","4 蔡清妍","5 蔡焌軒","6 周彥彤","7 關宗灝","8 奚梓麟","9 鄧諾文","10 郭俞彤","11 賴至誠","12 黎祉樂","13 林國言","14 李昕熹","15 梁晞妍","16 梁宇霆","17 吳卓言","18 吳沛珊","19 譚安喬","20 曾宇哲","21 黃寶謙","22 楊心妤","23 楊穎芯","24 楊祐安"],
+            "4D": ["1 陳俊凱","2 陳彥彤","3 鄭丞超","4 鄭穎恆","5 張榆澄","6 朱俊朗","7 洪力蔭","8 林泳彤","9 劉芷瑤","10 李洋愷","11 梁芷悠","12 蘇俊皓","13 施明雅","14 戴焯諾","15 譚楚桐","16 湯詠賢","17 曹子玥","18 黃琸舜","19 黃天嵐","20 黃逸翹","21 楊晟軒","22 楊景匡","23 邢維丞","24 翁奕琳"],
+            "4E": ["1 區竣睎","2 陳凱珮","3 陳詩穎","4 陳彥希","5 鄒家謙","6 鄭子諾","7 張浚杭","8 何敏嘉","9 羅卓謙","10 盧佳琪","11 伍偉庭","12 柯鈞諾","13 潘英貴","14 蘇凱潼","15 謝心弦","16 黃嘉欣","17 黃柏陶","18 黃梓晴","19 黃子誠","20 吳思橋"],
+            "5A": ["1 陳頌錡","2 陳淏揚","3 陳滶銘","4 陳思羽","5 鄭婥妤","6 趙恩彤","7 曹子錀","8 蔡子瑩","9 何思齊","10 郭靜瑩","11 郭幸兒","12 郭君睿","13 林迪文","14 梁卓然","15 李顯揚","16 李星慧","17 羅泳雅","18 盧妍孜","19 呂洛恒","20 馬曉晴","21 馬梓崴","22 歐恩貝","23 邱芊羽","24 譚知行","25 鄧司鉉","26 曾靖嵐","27 曾柏軒","28 吳金麟","29 胡定駱","30 楊玥瑩","31 翁浚皓","32 張銘曉"],
+            "5B": ["1 陳子悠","2 周雋希","3 鄭儲邦","4 莊浠瑩","5 夏子弘","6 賀子宸","7 許峻灝","8 林浩軒","9 林嘉敏","10 李卓珈","11 李俊逸","12 李朗達","13 李宇謙","14 李加敏","15 李允捷","16 廖幸兒","17 劉可兒","18 吳朗瑜","19 伍慧珊","20 岑可翹","21 孫銘浠","22 譚棨燊","23 譚應軒","24 曾慶洛","25 黃卓妤","26 黃承晞","27 黃梓欣","28 黃詠心","29 袁崇曦","30 周梓瑜"],
+            "5C": ["1 陳熹姸","2 陳瑋灝","3 陳昱霖","4 鄭哲","5 張嘉妤","6 鄒卓喬","7 鄺可喬","8 黎凱甄","9 黎子鏗","10 林思彤","11 劉佩祺","12 劉芷萱","13 李思瑤","14 盧鴻宇","15 盧思羽","16 曾瀚賢","17 徐羨喬","18 黃琸堯","19 黃芯諾","20 黃維博","21 黃雨桐","22 胡啓湸","23 胡倩瑋","24 楊舜之"],
+            "5D": ["1 陳凱恩","2 陳立喬","3 陳敏軒","4 陳茂凱","5 鄭奕飛","6 錢凱晴","7 蔡俊添","8 周青陽","9 周瑞蕎","10 鍾禮謙","11 戴嘉禧","12 何靖喬","13 何芷源","14 郭臨","15 林家而","16 林健銘","17 李卓穎","18 李凱宇","19 馬綽嬣","20 馬琝傑","21 馬恩悦","22 莫梓妤","23 吳芷盈","24 伍思妍","25 葉思朗","26 楊若萱"],
+            "5E": ["1 陳駿豪","2 陳芝敏","3 張怡禎","4 張怡萱","5 蔡卓翹","6 方栢宇","7 符碩軒","8 何家瑩","9 黃健彬","10 許悅","11 林思辰","12 林禹軒","13 羅婉瑩","14 李翊行","15 梁心盈","16 李姵賢","17 麥俊仁","18 譚暘霖","19 黃晉熹","20 王晧恩","21 邱炫智","22 楊浩程"],
+            "6A": ["1 陳泓俊","2 陳思成","3 張綽軒","4 張筱攸","5 程頌兒","6 周芷萱","7 周子祐","8 馮智譽","9 許樂媛","10 許心淇","11 洪巧恩","12 龔均曈","13 黎鐘澤","14 賴家敏","15 黎子芊","16 黎子萱","17 劉天溵","18 梁晨","19 梁詠嵐","20 李俊禧","21 李樂怡","22 林煇皓","23 廖望哲","24 吳承熹","25 潘茵彤","26 蕭梓諾","27 蕭仲言","28 施瀛鈞","29 鄧旨峻","30 黃卓文","31 黃苡喬","32 吳子君","33 鄭力中"],
+            "6B": ["1 區永揚","2 陳宏瑋","3 張浚一","4 張駿朗","5 張凱晴","6 張凱喬","7 張梓淳","8 張芷熒","9 蔡卓侖","10 鍾希兒","11 方心頤","12 何沛陞","13 葉景軒","14 郭千琬","15 郭倚彤","16 林樂恩","17 劉康佑","18 李曉琳","19 李瀚泓","20 林奕澍","21 羅琸嵐","22 龍洛蜂","23 曾梓傑","24 蔡永匡","25 尹佟恩","26 黃希瞳","27 黃可頤","28 黃贊臣","29 黃偉睿","30 吳璟悠"],
+            "6C": ["1 陳鎧廷","2 陳欣彤","3 周啟豪","4 鄭凱沂","5 張梓烽","6 趙梓希","7 趙慧喬","8 許願","9 林汶進","10 羅嘉悠","11 李智庭","12 梁雲姿","13 李芊慧","14 羅曦婷","15 伍君昊","16 鄧鈞朗","17 黃駿佑","18 黃思澄","19 吳政鋭","20 袁凱霖","21 翁奕熙"],
+            "6D": ["1 陳芷瑜","2 張浩揚","3 張晨曦","4 張映澄","5 鄒本騫","6 鍾峻熙","7 柯繼然","8 江俊曦","9 郭甯","10 林昱丞","11 李湚頤","12 梁文晞","13 李悅曦","14 呂柏軒","15 沙婉如","16 譚紫悦","17 鄧宇政","18 丁健悠","19 董穎天","20 黃健朗","21 胡浚鴻"],
+            "6E": ["1 陳倚盈","2 陳宇軒","3 鄭瑞豐","4 張晞瑜","5 張梓希","6 林曉婷","7 林梓慧","8 李承禧","9 李家興","10 林新杰","11 雷梓希","12 吳綽鎧","13 王鳳賢","14 王國南","15 黃致肇","16 黃鎮熙","17 黃振庭","18 楊希昕","19 葉子逸"]
+        };
+
+        const idioms = [
+            { text: "馬到功成", desc: "形容事情順利，一開始就取得成功。" },
+            { text: "龍馬精神", desc: "形容精神健旺、充沛。" },
+            { text: "老馬識途", desc: "比喻閱歷多的人富有經驗，熟悉情況，能起引導作用。" },
+            { text: "一馬當先", desc: "作戰時策馬衝鋒在前。形容領先，帶頭。" },
+            { text: "萬馬奔騰", desc: "聲勢浩大或場面熱烈。" },
+            { text: "千里馬", desc: "原指善跑的駿馬，後比喻有才幹的人。" }
+        ];
+
+        const classSelect = document.getElementById('class-select');
+        const studentSelect = document.getElementById('student-select');
+        Object.keys(studentDB).forEach(cls => { const option = document.createElement('option'); option.value = cls; option.innerText = cls; classSelect.appendChild(option); });
+        classSelect.addEventListener('change', function() {
+            const selectedClass = this.value; studentSelect.innerHTML = '<option value="" disabled selected>請選擇姓名</option>';
+            if (selectedClass) { studentSelect.disabled = false; studentDB[selectedClass].forEach(stu => { const option = document.createElement('option'); const parts = stu.split(' '); const name = parts.length > 1 ? parts[1] : parts[0]; option.value = name; option.innerText = stu; studentSelect.appendChild(option); }); } else { studentSelect.disabled = true; }
+        });
+
+        function resize() { canvasWidth = canvas.width = window.innerWidth; canvasHeight = canvas.height = window.innerHeight; groundHeight = canvasHeight * 0.75; }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // --- 類別定義 ---
+        class FinishLine {
+            constructor() { this.x = canvasWidth; this.y = 0; this.width = 100; this.crossed = false; }
+            update() { this.x -= speed * speedMultiplier; }
+            draw() { ctx.save(); ctx.beginPath(); ctx.moveTo(this.x, 0); ctx.lineTo(this.x, groundHeight - 150); ctx.lineWidth = 3; ctx.strokeStyle = '#555'; ctx.stroke(); ctx.fillStyle = '#d62828'; ctx.fillRect(this.x - 20, 50, 40, 200); ctx.beginPath(); ctx.moveTo(this.x - 20, 250); ctx.lineTo(this.x, 220); ctx.lineTo(this.x + 20, 250); ctx.lineTo(this.x + 20, 50); ctx.lineTo(this.x - 20, 50); ctx.fill(); ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = "bold 24px 'Ma Shan Zheng'"; ctx.textAlign = "center"; ctx.fillText("終", this.x, 100); ctx.fillText("點", this.x, 140); ctx.beginPath(); ctx.moveTo(this.x, 220); ctx.lineTo(this.x, 280); ctx.lineWidth = 2; ctx.strokeStyle = '#d62828'; ctx.stroke(); ctx.restore(); }
+        }
+        class Confetti {
+            constructor(x, y) { this.x = x; this.y = y; this.size = Math.random() * 10 + 5; this.speedX = Math.random() * 6 - 3; this.speedY = Math.random() * -10 - 5; this.color = `hsl(${Math.random() * 360}, 100%, 50%)`; this.rotation = Math.random() * 360; this.rotationSpeed = Math.random() * 10 - 5; this.gravity = 0.4; }
+            update() { this.x += this.speedX; this.speedY += this.gravity; this.y += this.speedY; this.rotation += this.rotationSpeed; }
+            draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation * Math.PI / 180); ctx.fillStyle = this.color; ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); ctx.restore(); }
+        }
+        class Particle {
+            constructor(x, y) { this.x = x; this.y = y; this.size = Math.random() * 5 + 2; this.speedX = Math.random() * 2 - 1; this.speedY = Math.random() * -1 - 0.5; this.color = `rgba(30, 30, 30, ${Math.random() * 0.4 + 0.1})`; this.markedForDeletion = false; }
+            update() { this.x -= speed * speedMultiplier * 0.8; this.x += this.speedX; this.y += this.speedY; this.size *= 0.95; if (this.size < 0.5) this.markedForDeletion = true; }
+            draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+        }
+        class WeatherParticle {
+            constructor(type) {
+                this.type = type; this.x = Math.random() * (canvasWidth + 200); this.y = Math.random() * canvasHeight;
+                if (type === 'rain') { this.vy = Math.random() * 15 + 15; this.vx = -4; this.length = Math.random() * 20 + 20; } else if (type === 'snow') { this.vy = Math.random() * 3 + 2; this.vx = Math.random() * 2 - 1; this.size = Math.random() * 4 + 2; this.swing = Math.random() * Math.PI * 2; } else if (type === 'autumn') { this.vy = Math.random() * 2 + 1; this.vx = Math.random() * -3 - 2; this.size = Math.random() * 6 + 4; this.rotation = Math.random() * 360; this.rotationSpeed = Math.random() * 4 - 2; const colors = ['rgba(160, 82, 45, 0.8)', 'rgba(205, 92, 92, 0.8)', 'rgba(218, 165, 32, 0.8)']; this.color = colors[Math.floor(Math.random() * colors.length)]; } else if (type === 'night') { this.vx = Math.random() * 2 - 1; this.vy = Math.random() * 2 - 1; this.size = Math.random() * 3 + 1; this.alpha = Math.random(); this.alphaSpeed = 0.02; }
+            }
+            update() {
+                if (this.type === 'night') { this.x += this.vx - (speed * 0.2); this.y += this.vy; this.alpha += this.alphaSpeed; if (this.alpha > 1 || this.alpha < 0.2) this.alphaSpeed *= -1; if (this.x < -50) this.x = canvasWidth + 50; if (this.y < 0) this.y = canvasHeight; if (this.y > canvasHeight) this.y = 0; }
+                else { this.y += this.vy; if (this.type === 'snow') { this.swing += 0.05; this.x += Math.sin(this.swing) * 1 + this.vx; this.x -= speed * 0.2; } else if (this.type === 'autumn') { this.x += this.vx; this.rotation += this.rotationSpeed; this.x -= speed * 0.2; } else { this.x += this.vx; this.x -= speed * 0.5; } if (this.y > canvasHeight || this.x < -100) { this.y = -20; this.x = Math.random() * (canvasWidth + 200); } }
+            }
+            draw() {
+                if (this.type === 'rain') { ctx.strokeStyle = 'rgba(120, 130, 140, 0.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.vx * 2, this.y + this.length); ctx.stroke(); } else if (this.type === 'snow') { ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); } else if (this.type === 'autumn') { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rotation * Math.PI / 180); ctx.fillStyle = this.color; ctx.beginPath(); ctx.ellipse(0, 0, this.size, this.size/2, 0, 0, Math.PI*2); ctx.fill(); ctx.restore(); } else if (this.type === 'night') { ctx.fillStyle = `rgba(200, 255, 100, ${this.alpha})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = `rgba(200, 255, 100, ${this.alpha * 0.3})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2); ctx.fill(); }
+            }
+        }
+        class WeatherSystem {
+            constructor(type) { this.type = type; this.particles = []; if (this.type !== 'sunny') { let count = 50; if (this.type === 'rain') count = 80; if (this.type === 'night') count = 30; if (this.type === 'autumn') count = 40; for(let i=0; i<count; i++) { this.particles.push(new WeatherParticle(this.type)); } } }
+            update() { if (this.type === 'sunny') return; this.particles.forEach(p => p.update()); }
+            draw() { if (this.type === 'sunny') return; this.particles.forEach(p => p.draw()); }
+        }
+        class Cloud {
+            constructor() { this.x = Math.random() * canvasWidth; this.y = Math.random() * (canvasHeight * 0.4); this.width = Math.random() * 100 + 80; this.speedFactor = Math.random() * 0.2 + 0.1; this.opacity = Math.random() * 0.4 + 0.2; }
+            update() { this.x -= speed * speedMultiplier * this.speedFactor; if (this.x + this.width < 0) { this.x = canvasWidth + 50; this.y = Math.random() * (canvasHeight * 0.4); } }
+            draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`; ctx.beginPath(); ctx.arc(this.x, this.y, 30, 0, Math.PI * 2); ctx.arc(this.x + 40, this.y - 10, 40, 0, Math.PI * 2); ctx.arc(this.x + 80, this.y, 30, 0, Math.PI * 2); ctx.fill(); }
+        }
+        class Bamboo {
+            constructor() { this.reset(); }
+            reset() { this.x = canvasWidth + Math.random() * 300; this.y = groundHeight + 20; this.height = Math.random() * 200 + 150; this.width = Math.random() * 6 + 4; this.depth = Math.random(); this.speedFactor = 0.5 - (this.depth * 0.2); this.opacity = 0.8 - (this.depth * 0.5); this.leaves = []; let segHeight = 30 + Math.random() * 20; for(let h=50; h<this.height; h+=segHeight) { if(Math.random() > 0.3) { let leafCount = Math.floor(Math.random() * 3) + 2; for(let i=0; i<leafCount; i++) { this.leaves.push({ h: h, angle: (Math.random() * 0.8 - 0.4), length: Math.random() * 25 + 15 }); } } } }
+            update() { this.x -= speed * speedMultiplier * this.speedFactor; if (this.x < -50) { this.reset(); } }
+            draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.fillStyle = `rgba(45, 60, 45, ${this.opacity})`; ctx.strokeStyle = `rgba(45, 60, 45, ${this.opacity})`; let segHeight = 35; for(let h=0; h<this.height; h+=segHeight) { let localW = this.width - (h/this.height)*2; ctx.fillRect(-localW/2, -h - segHeight, localW, segHeight - 2); ctx.beginPath(); ctx.moveTo(-localW/2 - 2, -h); ctx.lineTo(localW/2 + 2, -h); ctx.lineWidth = 2; ctx.stroke(); } this.leaves.forEach(leaf => { ctx.save(); ctx.translate(0, -leaf.h); ctx.rotate(leaf.angle); ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(leaf.length/2, 5, leaf.length, 0); ctx.quadraticCurveTo(leaf.length/2, -5, 0, 0); ctx.fill(); ctx.restore(); }); ctx.restore(); }
+        }
+        class Bird {
+            constructor() { this.reset(); }
+            reset() { this.x = canvasWidth + Math.random() * 1000; this.y = Math.random() * (canvasHeight * 0.3) + 20; this.speedX = Math.random() * 2 + 2; this.size = Math.random() * 10 + 10; this.wingSpeed = 0.2; this.angle = 0; }
+            update() { this.x -= (speed * 0.5 + this.speedX); this.angle += this.wingSpeed; if(this.x < -50) this.reset(); }
+            draw() { ctx.save(); ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.translate(this.x, this.y); ctx.beginPath(); let wingY = Math.sin(this.angle) * 5; ctx.moveTo(-this.size/2, -wingY); ctx.quadraticCurveTo(0, 5, this.size/2, -wingY); ctx.stroke(); ctx.restore(); }
+        }
+        class Background {
+            constructor() { this.mountains = []; let currentX = 0; while (currentX < canvasWidth + 500) { this.addMountain(currentX); let lastM = this.mountains[this.mountains.length - 1]; currentX = lastM.x + lastM.width - 100; } this.clouds = []; for(let i=0; i<5; i++) this.clouds.push(new Cloud()); this.bamboos = []; for(let i=0; i<12; i++) this.bamboos.push(new Bamboo()); this.birds = []; for(let i=0; i<3; i++) this.birds.push(new Bird()); }
+            addMountain(xOffset) { this.mountains.push({ x: xOffset, y: groundHeight, width: Math.random() * 300 + 200, height: Math.random() * 150 + 80, opacity: Math.random() * 0.2 + 0.05 }); }
+            update() { this.clouds.forEach(c => c.update()); this.mountains.forEach(m => { m.x -= speed * speedMultiplier * 0.2; }); if (this.mountains.length > 0 && this.mountains[0].x + this.mountains[0].width < -100) { this.mountains.shift(); } let lastM = this.mountains[this.mountains.length - 1]; if (lastM.x + lastM.width < canvasWidth + 500) { this.addMountain(lastM.x + lastM.width - 100); } this.bamboos.sort((a, b) => a.depth - b.depth); this.bamboos.forEach(b => b.update()); this.birds.forEach(b => b.update()); }
+            draw() {
+                if (weatherSystem.type === 'rain') ctx.fillStyle = '#cfd3d6'; else if (weatherSystem.type === 'snow') ctx.fillStyle = '#dbe4eb'; else if (weatherSystem.type === 'night') ctx.fillStyle = '#7f8fa6'; else if (weatherSystem.type === 'autumn') ctx.fillStyle = '#fdf5e6'; else ctx.fillStyle = '#fdfbf7';
+                ctx.fillRect(0, 0, canvasWidth, groundHeight);
+                if (weatherSystem.type === 'night') { ctx.fillStyle = '#fdfbf7'; ctx.beginPath(); ctx.arc(canvasWidth * 0.8, canvasHeight * 0.2, 30, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.beginPath(); ctx.arc(canvasWidth * 0.8, canvasHeight * 0.2, 45, 0, Math.PI*2); ctx.fill(); } else if (weatherSystem.type !== 'rain') { if (weatherSystem.type === 'autumn') ctx.fillStyle = '#e17055'; else ctx.fillStyle = '#b33939'; ctx.beginPath(); ctx.arc(canvasWidth * 0.8, canvasHeight * 0.2, 40, 0, Math.PI*2); ctx.fill(); }
+                this.clouds.forEach(c => c.draw()); this.mountains.forEach(m => { if (weatherSystem.type === 'night') ctx.fillStyle = `rgba(20, 30, 40, ${m.opacity + 0.2})`; else ctx.fillStyle = `rgba(100, 100, 100, ${m.opacity})`; ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.bezierCurveTo(m.x + m.width/3, m.y - m.height, m.x + m.width*0.6, m.y - m.height/2, m.x + m.width, m.y); ctx.fill(); });
+                this.bamboos.forEach(b => b.draw()); this.birds.forEach(b => b.draw());
+                ctx.beginPath(); ctx.rect(0, groundHeight, canvasWidth, canvasHeight - groundHeight); if (weatherSystem.type === 'night') ctx.fillStyle = '#95a5a6'; else ctx.fillStyle = '#e8e6e1'; ctx.fill();
+                ctx.beginPath(); ctx.moveTo(0, groundHeight); ctx.lineTo(canvasWidth, groundHeight); ctx.strokeStyle = '#555'; ctx.lineWidth = 2; ctx.stroke();
+            }
+        }
+        class Horse {
+            constructor() {
+                this.scale = 0.6; this.width = 120 * this.scale; this.height = 100 * this.scale; this.x = canvasWidth * 0.15; this.y = groundHeight - this.height; this.vy = 0; this.weight = 2.5; this.jumpStrength = -28; this.isJumping = false; this.frame = 0;
+                this.useImage = false; this.runImg1 = new Image(); this.runImg2 = new Image(); this.jumpImg = new Image(); this.runImg1.src = 'horse_run1.png'; this.runImg2.src = 'horse_run2.png'; this.jumpImg.src = 'horse_jump.png';
+                const checkLoad = () => this.checkImages(); const handleError = () => { this.useImage = false; let statusDiv = document.getElementById('img-status'); if(statusDiv) statusDiv.innerText = "圖片缺失或錯誤，使用手繪模式"; };
+                this.runImg1.onload = checkLoad; this.runImg2.onload = checkLoad; this.jumpImg.onload = checkLoad; this.runImg1.onerror = handleError; this.runImg2.onerror = handleError; this.jumpImg.onerror = handleError;
+            }
+            checkImages() { if (this.runImg1.complete && this.runImg1.naturalWidth > 0 && this.runImg2.complete && this.runImg2.naturalWidth > 0 && this.jumpImg.complete && this.jumpImg.naturalWidth > 0) { this.useImage = true; let statusDiv = document.getElementById('img-status'); if(statusDiv) statusDiv.innerText = "圖片加載成功！(動畫模式)"; } }
+            update() { this.vy += this.weight; this.y += this.vy; if (this.y > groundHeight - this.height) { this.y = groundHeight - this.height; this.vy = 0; this.isJumping = false; } this.frame++; }
+            draw() {
+                if (this.useImage) { try { ctx.save(); let currentImg; if (this.isJumping) { currentImg = this.jumpImg; } else { currentImg = (Math.floor(this.frame / 6) % 2 === 0) ? this.runImg1 : this.runImg2; } if (currentImg && currentImg.width > 0) { let drawW = 150; let drawH = 150 * (currentImg.height / currentImg.width); if (!isFinite(drawH)) drawH = 100; let drawY = this.y - 30; let bounce = this.isJumping ? 0 : Math.sin(this.frame * 0.8) * 3; ctx.drawImage(currentImg, this.x, drawY + bounce, drawW, drawH); } else { this.drawVectorHorse(); } ctx.restore(); } catch (e) { this.useImage = false; this.drawVectorHorse(); } } else { this.drawVectorHorse(); }
+            }
+            drawVectorHorse() {
+                ctx.save(); ctx.translate(this.x, this.y); ctx.scale(this.scale, this.scale); ctx.fillStyle = '#050505'; ctx.strokeStyle = '#050505'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                const t = this.frame * 0.5; let swing = Math.sin(t); let swing2 = Math.sin(t + Math.PI); if (this.isJumping) { swing = -1; swing2 = -0.5; }
+                ctx.beginPath(); ctx.moveTo(130, 30); ctx.quadraticCurveTo(110, 50, 90, 60); ctx.quadraticCurveTo(70, 90, 50, 80); ctx.lineTo(20, 75); ctx.quadraticCurveTo(0, 75, 5, 50); ctx.quadraticCurveTo(10, 30, 40, 35); ctx.quadraticCurveTo(60, 40, 80, 25); ctx.quadraticCurveTo(100, 0, 120, 10); ctx.lineTo(130, 15); ctx.closePath(); ctx.fill(); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(90, 15); ctx.quadraticCurveTo(100, 5, 110, -5); ctx.moveTo(85, 20); ctx.quadraticCurveTo(90, 0, 95, -10); ctx.moveTo(80, 25); ctx.quadraticCurveTo(75, 10, 70, 0); ctx.stroke(); ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(10, 40); let tailY = this.isJumping ? -20 : Math.sin(t) * 10; ctx.bezierCurveTo(-20, 30 + tailY, -30, 60 + tailY, -40, 50 + tailY); ctx.stroke(); this.drawBrushLeg(10, 70, swing2, true); this.drawBrushLeg(80, 75, swing, true); ctx.fillStyle = '#050505'; ctx.beginPath(); ctx.ellipse(50, 60, 40, 25, 0, 0, Math.PI*2); ctx.fill(); this.drawBrushLeg(15, 75, swing, false); this.drawBrushLeg(85, 80, swing2, false); ctx.restore();
+            }
+            drawBrushLeg(x, y, swing, isFar) { ctx.lineWidth = isFar ? 6 : 8; ctx.strokeStyle = isFar ? '#2a2a2a' : '#000'; ctx.beginPath(); ctx.moveTo(x, y); let kneeX = x + swing * 20; let kneeY = y + 30; if (this.isJumping) { kneeY = y + 20; if(x > 50) { kneeX = x + 30; } else { kneeX = x - 10; } } let footX = kneeX + (swing * 15); let footY = kneeY + 30; ctx.quadraticCurveTo(x - 5, y + 15, kneeX, kneeY); ctx.stroke(); ctx.lineWidth = isFar ? 4 : 5; ctx.beginPath(); ctx.moveTo(kneeX, kneeY); ctx.lineTo(footX, footY); ctx.stroke(); }
+            jump() {
+                if (!this.isJumping) { this.vy = this.jumpStrength; this.isJumping = true; try { playTone(400, 'triangle'); } catch(e) {} for(let i=0; i<8; i++) { particles.push(new Particle(this.x + 50, this.y + this.height)); } }
+            }
+        }
+        class Obstacle {
+            constructor() {
+                this.width = Math.random() * 30 + 30; let currentDist = Math.floor(score/5);
+                if (currentDist >= 450) { this.height = Math.random() * 30 + 50; this.width = Math.random() * 40 + 50; } else { this.height = Math.random() * 25 + 25; }
+                this.x = canvasWidth; this.y = groundHeight - this.height; this.markedForDeletion = false; this.type = Math.random() > 0.6 ? 'rock' : 'bush';
+            }
+            update() { this.x -= speed * speedMultiplier; if (this.x < -this.width) this.markedForDeletion = true; }
+            draw() {
+                ctx.fillStyle = '#2d2d2d';
+                if (this.type === 'rock') { ctx.beginPath(); ctx.moveTo(this.x, this.y + this.height); ctx.lineTo(this.x + 10, this.y + 10); ctx.lineTo(this.x + this.width / 2, this.y); ctx.lineTo(this.x + this.width - 5, this.y + 15); ctx.lineTo(this.x + this.width, this.y + this.height); ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(this.x + 10, this.y + this.height); ctx.lineTo(this.x + 20, this.y + 20); ctx.stroke(); } else { ctx.beginPath(); ctx.arc(this.x + this.width/2, this.y + this.height, this.width/2, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(this.x + 10, this.y + this.height - 10, 5, 0, Math.PI*2); ctx.arc(this.x + this.width - 10, this.y + this.height - 5, 4, 0, Math.PI*2); ctx.fill(); }
+            }
+        }
+
+        function playTone(freq, type) { try { if (audioCtx.state === 'suspended') audioCtx.resume(); const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime); gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); } catch (e) { console.warn("Audio error", e); } }
+        function playWinSound() { setTimeout(() => playTone(400, 'sine'), 0); setTimeout(() => playTone(500, 'sine'), 200); setTimeout(() => playTone(800, 'sine'), 400); }
+        function playFailSound() { setTimeout(() => playTone(200, 'sawtooth'), 0); setTimeout(() => playTone(150, 'sawtooth'), 300); }
+
+        function initGame(forceType) {
+            horse = new Horse(); obstacles = []; particles = []; confettiParticles = []; score = 0; speedMultiplier = 1; gameFrame = 0; spawnTimer = 0; rushStage = 0; finishLine = null;
+            let statusDiv = document.getElementById('img-status'); if(statusDiv) { statusDiv.innerText = "圖片狀態: 檢查中..."; statusDiv.style.color = "#888"; statusDiv.style.fontWeight = "normal"; statusDiv.style.textShadow = "none"; }
+            let type = forceType; if (!type || type === 'random') { const weathers = ['sunny', 'rain', 'snow', 'night', 'autumn']; type = weathers[Math.floor(Math.random() * weathers.length)]; }
+            weatherSystem = new WeatherSystem(type); background = new Background(); if(horse.checkImages) horse.checkImages();
+        }
+        window.initGame = initGame;
+
+        function startGame() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const classSelect = document.getElementById('class-select'); const studentSelect = document.getElementById('student-select'); const bgSelect = document.getElementById('bg-select');
+            const selectedClass = classSelect.value; const selectedName = studentSelect.value; const selectedBg = bgSelect.value;
+            if (selectedClass && selectedName) { currentPlayerName = selectedClass + " " + selectedName; } else { currentPlayerName = ""; }
+            document.getElementById('player-name-display').innerText = currentPlayerName;
+            classSelect.blur(); studentSelect.blur(); bgSelect.blur(); if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+            document.getElementById('start-screen').classList.add('hidden'); document.getElementById('end-screen').classList.add('hidden');
+            initGame(selectedBg); isPlaying = true; lastTime = 0; animate(0);
+        }
+        window.startGame = startGame;
+
+        function resetGame() { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); document.getElementById('end-screen').classList.add('hidden'); document.getElementById('player-name-display').innerText = ""; document.getElementById('start-screen').classList.remove('hidden'); }
+        window.resetGame = resetGame;
+
+        function animate(timeStamp) {
+            try {
+                const deltaTime = timeStamp - lastTime; lastTime = timeStamp; if (!isPlaying) return;
+                let currentDist = Math.floor(score/5); let shakeX = 0; let shakeY = 0; if (currentDist >= 450) { shakeX = Math.random() * 3 - 1.5; shakeY = Math.random() * 3 - 1.5; }
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight); ctx.save(); ctx.translate(shakeX, shakeY);
+                background.update(); background.draw();
+                if (currentDist >= targetScore && !finishLine) { finishLine = new FinishLine(); }
+                if (finishLine) {
+                    finishLine.update(); finishLine.draw();
+                    if (!finishLine.crossed && horse.x > finishLine.x) { finishLine.crossed = true; for(let i=0; i<50; i++) { confettiParticles.push(new Confetti(horse.x + 50, horse.y)); } setTimeout(() => gameOver(true), 500); }
+                } else {
+                    spawnTimer--; if (spawnTimer <= 0) {
+                        obstacles.push(new Obstacle()); let minGap, variance;
+                        if (currentDist >= 450) { if (rushStage < 2) { rushStage = 2; let statusDiv = document.getElementById('img-status'); if(statusDiv) { statusDiv.innerText = "⚡️ 最後50米！極限反應！"; statusDiv.style.color = "#9b59b6"; statusDiv.style.fontWeight = "bold"; statusDiv.style.fontSize = "2rem"; statusDiv.style.textShadow = "0px 0px 10px #fff"; } } minGap = 22; variance = 30; } 
+                        else if (currentDist >= 400) { if (rushStage < 1) { rushStage = 1; let statusDiv = document.getElementById('img-status'); if(statusDiv) { statusDiv.innerText = "🔥 最後衝刺！小心障礙！"; statusDiv.style.color = "#d62828"; statusDiv.style.fontWeight = "bold"; statusDiv.style.fontSize = "2rem"; } } minGap = 28; variance = 10; } 
+                        else { let difficultyReduce = Math.min(score * 0.01, 15); minGap = Math.max(30, 40 - difficultyReduce); variance = Math.max(15, 30 - difficultyReduce); }
+                        spawnTimer = Math.random() * variance + minGap;
+                    }
+                }
+                for (let i = 0; i < obstacles.length; i++) {
+                    let obs = obstacles[i]; obs.update(); obs.draw();
+                    let hitX = horse.x + 30; let hitY = horse.y + 20; let hitW = Math.max(10, horse.width - 60); let hitH = Math.max(10, horse.height - 35);
+                    if (hitX < obs.x + obs.width && hitX + hitW > obs.x && hitY < obs.y + obs.height && hitY + hitH > obs.y) { gameOver(false); return; }
+                }
+                obstacles = obstacles.filter(obs => !obs.markedForDeletion);
+                confettiParticles.forEach(p => { p.update(); p.draw(); });
+                if (!finishLine || !finishLine.crossed) { if (!horse.isJumping && gameFrame % 6 === 0) { particles.push(new Particle(horse.x + 40, horse.y + horse.height)); } }
+                particles.forEach(p => { p.update(); p.draw(); }); particles = particles.filter(p => !p.markedForDeletion);
+                horse.update(); horse.draw(); weatherSystem.update(); weatherSystem.draw(); ctx.restore();
+                if (isPlaying) { score++; }
+                currentDist = Math.floor(score/5); let displayDist = Math.min(currentDist, targetScore); document.getElementById('score-display').innerText = `距離: ${displayDist} 米`;
+                speedMultiplier = 1 + (score * 0.001); if (currentDist >= 450) { let turbulence = 1.3 + Math.sin(gameFrame * 0.15) * 0.15; speedMultiplier *= turbulence; }
+                gameFrame++; animationId = requestAnimationFrame(animate);
+            } catch (e) { console.error("Game loop crash:", e); isPlaying = false; }
+        }
+
+        function gameOver(isWin) {
+            isPlaying = false; cancelAnimationFrame(animationId);
+            const endScreen = document.getElementById('end-screen'); const title = document.getElementById('end-title'); const scoreText = document.getElementById('end-score'); const idiomText = document.getElementById('idiom-text'); const idiomDesc = document.getElementById('idiom-desc');
+            endScreen.classList.remove('hidden');
+            let finalScore = Math.floor(score/5);
+            if (isWin) {
+                title.innerText = "馬到功成！"; title.style.color = "#d62828";
+                if (currentPlayerName) { scoreText.innerText = `恭喜 ${currentPlayerName} 到達了 ${targetScore} 米終點！`; if(window.saveRecord) window.saveRecord(currentPlayerName, targetScore); } else { scoreText.innerText = `恭喜你到達了 ${targetScore} 米終點！`; }
+                playWinSound();
+            } else {
+                title.innerText = "再接再厲"; title.style.color = "#555";
+                let displayScore = Math.min(finalScore, targetScore);
+                if(currentPlayerName && finalScore > 0) { if(window.saveRecord) window.saveRecord(currentPlayerName, finalScore); }
+                if (currentPlayerName) { scoreText.innerText = `${currentPlayerName} 本次奔跑距離：${displayScore} 米`; } else { scoreText.innerText = `本次奔跑距離：${displayScore} 米`; }
+                playFailSound();
+            }
+            try { const randomIdiom = idioms[Math.floor(Math.random() * idioms.length)]; idiomText.innerText = randomIdiom.text; idiomDesc.innerText = randomIdiom.desc; } catch(e) {}
+        }
+
+        function handleInput(e) {
+            if (e.code === 'Space' || e.key === ' ') e.preventDefault();
+            if (e.type === 'touchstart' && isPlaying) e.preventDefault();
+            if (e.code === 'Space' || e.key === ' ' || e.type === 'touchstart' || e.type === 'mousedown') {
+                if (isPlaying) { horse.jump(); } else { if (!document.getElementById('end-screen').classList.contains('hidden') && (e.code === 'Space' || e.key === ' ')) { resetGame(); } }
+            }
+        }
+        window.addEventListener('keydown', handleInput); window.addEventListener('touchstart', handleInput, {passive: false}); window.addEventListener('mousedown', handleInput);
+
+        // 預設本地儲存
+        window.saveRecord = function(name, distance) {
+            let records = JSON.parse(localStorage.getItem('horseGame_leaders') || '[]');
+            records.push({ name: name, score: distance, timestamp: new Date().toISOString() });
+            records.sort((a, b) => b.score - a.score); if(records.length > 50) records = records.slice(0, 50);
+            localStorage.setItem('horseGame_leaders', JSON.stringify(records));
+        };
+        window.renderLeaderboard = function(records) {
+            const listContainer = document.getElementById('leaderboard-list'); records.sort((a, b) => b.score - a.score); records = records.slice(0, 50);
+            let html = ""; if (records.length === 0) html = "<div style='text-align:center; padding:20px; color:#888;'>暫無記錄</div>";
+            else { records.forEach((rec, index) => { let rankClass = ""; if (index === 0) rankClass = "rank-1"; if (index === 1) rankClass = "rank-2"; if (index === 2) rankClass = "rank-3"; html += `<div class="leaderboard-item ${rankClass}"><span class="rank-num">${index + 1}</span><span class="rank-name">${rec.name || "無名氏"}</span><span class="rank-score">${rec.score} 米</span></div>`; }); }
+            listContainer.innerHTML = html;
+        };
+        window.showLeaderboard = function() { const records = JSON.parse(localStorage.getItem('horseGame_leaders') || '[]'); window.renderLeaderboard(records); document.getElementById('leaderboard-layer').classList.remove('hidden'); };
+        window.closeLeaderboard = function() { document.getElementById('leaderboard-layer').classList.add('hidden'); };
+        window.clearLeaderboard = function() { if(confirm("確定要清除本機記錄嗎？")) { localStorage.removeItem('horseGame_leaders'); alert("已清除"); window.renderLeaderboard([]); } };
+
+    </script>
+
+    <!-- 雲端模組 (漸進增強) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const userFirebaseConfig = { apiKey: "AIzaSyCdXs8koAE6yHcFlpn_AUwd-CVIra_JHeI", authDomain: "horse-953b3.firebaseapp.com", projectId: "horse-953b3", storageBucket: "horse-953b3.firebasestorage.app", messagingSenderId: "544698080960", appId: "1:544698080960:web:6da549f79dadcc4ca8d725", measurementId: "G-THQY7C7JKF" };
+
+        try {
+            let config = userFirebaseConfig;
+            if (typeof __firebase_config !== 'undefined') config = JSON.parse(__firebase_config);
+            const app = initializeApp(config);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            let currentUser = null;
+            let unsubscribeLeaderboard = null;
+
+            (async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                    else await signInAnonymously(auth);
+                } catch(e) { console.warn("Auth error", e); }
+            })();
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    console.log("Cloud Mode Activated");
+                    
+                    // 覆寫為雲端版本
+                    window.saveRecord = async function(name, distance) {
+                        try { await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), { name: name, score: distance, timestamp: new Date().toISOString() }); }
+                        catch (e) { console.error("Cloud save failed", e); }
+                    };
+                    
+                    window.showLeaderboard = function() {
+                        document.getElementById('leaderboard-layer').classList.remove('hidden');
+                        document.getElementById('leaderboard-list').innerHTML = "<div style='text-align:center; padding:20px; color:#888;'>載入中...</div>";
+                        if (unsubscribeLeaderboard) unsubscribeLeaderboard();
+                        unsubscribeLeaderboard = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), (snapshot) => {
+                            let records = []; snapshot.forEach(doc => records.push(doc.data())); window.renderLeaderboard(records);
+                        }, (error) => {
+                            console.error("Cloud load failed", error);
+                            // Fallback to local
+                            const records = JSON.parse(localStorage.getItem('horseGame_leaders') || '[]'); window.renderLeaderboard(records);
+                        });
+                    };
+
+                    window.closeLeaderboard = function() {
+                        document.getElementById('leaderboard-layer').classList.add('hidden');
+                        if (unsubscribeLeaderboard) { unsubscribeLeaderboard(); unsubscribeLeaderboard = null; }
+                    };
+
+                    window.clearLeaderboard = async function() {
+                        if(confirm("確定要清除所有雲端記錄嗎？")) {
+                            try {
+                                const snapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'));
+                                const promises = snapshot.docs.map(docSnap => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', docSnap.id)));
+                                await Promise.all(promises); alert("雲端記錄已清除");
+                            } catch(e) { alert("清除失敗"); }
+                        }
+                    };
+                }
+            });
+        } catch (e) { console.warn("Cloud init failed, staying local."); }
+    </script>
+</body>
+</html>
