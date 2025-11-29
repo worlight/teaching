@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數位數學練習簿</title>
+    
+    <!-- 引入 Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- 變數設定 --- */
+        :root {
+            --user-font-size: 26px;
+            --line-color: #a4b0be; /* 統一線條顏色 */
+        }
+
+        /* --- 基礎設定 --- */
+        body {
+            background-color: #f0f2f5;
+            font-family: "Lora", "KaiTi", "BiauKai", "DFKai-SB", serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overscroll-behavior: none;
+            overflow: auto; 
+        }
+
+        /* --- 控制面板 --- */
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap; 
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            max-width: 95vw;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            flex-wrap: wrap; 
+            justify-content: center;
+        }
+
+        button, select {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap; 
+        }
+        
+        select {
+            background-color: #fff;
+            color: #333;
+            border: 1px solid #ddd;
+            padding-right: 25px; /* for arrow */
+        }
+
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        button.active {
+            background-color: #1a73e8;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            font-weight: bold;
+        }
+
+        button.tool-btn {
+            background-color: white;
+            color: #555;
+            border: 1px solid #ddd;
+        }
+        
+        button.tool-btn.active {
+            background-color: #e8f0fe;
+            color: #1967d2;
+            border-color: #1967d2;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .color-dot:hover { transform: scale(1.2); }
+        .color-dot.active { border-color: #333; box-shadow: 0 0 0 2px white, 0 0 0 4px #ccc; }
+
+        /* 儲存狀態提示 */
+        #save-status {
+            font-size: 12px;
+            color: #28a745;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.5s;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* --- 縮放容器 --- */
+        #zoom-wrapper {
+            transition: transform 0.1s ease-out;
+            transform-origin: top center;
+        }
+
+        /* --- 筆記本容器 --- */
+        .notebook-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap; 
+            align-content: flex-start;
+        }
+
+        /* --- 單頁紙張 --- */
+        .page {
+            background-color: white;
+            width: 210mm;
+            height: 297mm;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            padding: 0;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-bottom: 20px; 
+        }
+
+        /* --- 繪圖層 (Canvas) --- */
+        .drawing-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        .page.typing-mode .drawing-layer {
+            pointer-events: none;
+            cursor: default;
+        }
+
+        /* --- 紅色垂直線 --- */
+        .red-margin-line {
+            position: absolute;
+            left: 30mm;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #ff6b6b;
+            z-index: 10; 
+            pointer-events: none; 
+        }
+
+        /* --- 頂部留白 (Header) --- */
+        .page-header {
+            height: 12%;
+            width: 100%;
+            border-bottom: 1px solid var(--line-color);
+            position: relative;
+            padding: 0;
+            display: flex;
+            align-items: stretch;
+            z-index: 5;
+        }
+        
+        .header-left {
+            width: 30mm;
+            display: flex;
+            align-items: flex-end; 
+            justify-content: flex-end; 
+            padding-right: 2mm;
+            padding-bottom: 2mm;
+            box-sizing: border-box;
+            outline: none;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .header-right {
+            flex: 1;
+            display: flex;
+            align-items: flex-end; 
+            justify-content: flex-start; 
+            padding-left: 2mm;
+            padding-bottom: 2mm;
+            box-sizing: border-box;
+            outline: none;
+            font-size: 20px;
+            color: #333;
+        }
+
+        /* --- 中間內容區 --- */
+        .page-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            z-index: 5;
+        }
+
+        /* --- 每一行 (Flex 容器) --- */
+        .line-row {
+            flex: 1;
+            border-bottom: 1px solid var(--line-color);
+            position: relative;
+            display: flex; 
+            align-items: stretch;
+            font-size: var(--user-font-size);
+            color: #333;
+            line-height: 1.2;
+        }
+
+        /* --- 通用單元格樣式 --- */
+        .line-cell {
+            outline: none;
+            display: flex;
+            align-items: end;
+            box-sizing: border-box;
+        }
+        /* 聚焦效果 */
+        .line-cell:focus, .header-left:focus, .header-right:focus {
+            background-color: rgba(66, 133, 244, 0.05);
+        }
+        
+        /* --- 舊版單行樣式 (高年級) --- */
+        .line-row.line-type .line-left {
+            width: 30mm; 
+            justify-content: flex-end;
+            text-align: right;
+            padding-right: 2mm; 
+            color: #555;
+            font-size: 0.9em; 
+        }
+
+        .line-row.line-type .line-right {
+            flex: 1; 
+            padding-left: 2mm; 
+            padding-right: 10mm;
+        }
+
+        /* --- 新版方格樣式 (低年級) --- */
+        .grid-row .line-left-grid,
+        .grid-row .line-right-main,
+        .grid-row .line-right-grid {
+            border-right: 1px solid var(--line-color);
+        }
+
+        .line-left-grid {
+            width: 10mm; 
+            justify-content: center;
+            color: #555;
+        }
+        .line-left-grid:nth-of-type(3) {
+            border-right: none;
+        }
+
+        .line-right-main {
+            flex: 1;
+            padding-left: 2mm;
+            padding-right: 2mm;
+        }
+
+        .line-right-grid-group {
+            display: flex;
+        }
+
+        .line-right-grid {
+            width: 10mm; 
+            justify-content: center;
+        }
+        .line-right-grid:last-child {
+            border-right: none;
+        }
+
+        .page-footer {
+            height: 10%;
+            width: 100%;
+            position: relative;
+        }
+
+        .footer-text {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+
+        @media print {
+            body { background: white; padding: 0; display: block; overflow: visible; }
+            .controls { display: none; }
+            #zoom-wrapper { transform: none !important; width: auto !important; height: auto !important; margin: 0 !important; }
+            .notebook-container { gap: 0; display: block; }
+            .page { 
+                box-shadow: none; 
+                page-break-after: always; 
+                margin: 0 auto; 
+                margin-bottom: 0;
+                float: none;
+            }
+            canvas { display: block; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <!-- 模式切換 -->
+        <div class="control-group">
+            <button id="btn-type" class="active" onclick="setMode('type')">⌨️ 打字</button>
+            <button id="btn-draw" onclick="setMode('draw')">✏️ 手寫</button>
+        </div>
+
+        <!-- 繪圖工具 -->
+        <div class="control-group" id="draw-tools" style="display: none;">
+            <div class="color-dot active" style="background: black;" onclick="setPenColor('black', this)"></div>
+            <div class="color-dot" style="background: #ea4335;" onclick="setPenColor('#ea4335', this)"></div>
+            <div class="color-dot" style="background: #1a73e8;" onclick="setPenColor('#1a73e8', this)"></div>
+            
+            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+            
+            <button class="tool-btn active" id="tool-pen" onclick="setTool('pen')">筆刷</button>
+            <button class="tool-btn" id="tool-eraser" onclick="setTool('eraser')">橡皮擦</button>
+            
+            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+            <label style="font-size: 14px;">粗細:</label>
+            <input type="range" min="1" max="10" value="2" style="width: 60px;" oninput="updateLineWidth(this.value)" title="調整筆畫粗細">
+
+            <!-- Undo/Redo -->
+            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+            <button class="tool-btn" onclick="undo()" title="復原 (Ctrl+Z)">↩️ 復原</button>
+            <button class="tool-btn" onclick="redo()" title="重做 (Ctrl+Y)">↪️ 重做</button>
+
+            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+            <button class="tool-btn" onclick="clearCanvas()" style="color: #ea4335;">清空筆跡</button>
+        </div>
+        
+        <!-- 字體與縮放 -->
+        <div class="control-group" id="type-tools">
+            <label style="font-size: 14px;">字體:</label>
+            <input type="range" min="12" max="40" value="26" oninput="updateFontSize(this.value)">
+        </div>
+
+        <div class="control-group" style="border-left: 1px solid #ddd; padding-left: 5px;">
+            <label style="font-size: 14px;">🔍 縮放: <span id="zoom-val">100%</span></label>
+            <input type="range" min="0.5" max="1.5" step="0.1" value="1" oninput="setZoom(this.value)">
+        </div>
+
+        <!-- 格式選擇 -->
+        <div class="control-group">
+            <div style="display: flex; align-items: center; background: #e8f0fe; border-radius: 5px; padding: 0 5px;">
+                <label for="notebook-type" style="font-size: 14px; color: #1a73e8; margin-right: 5px;">格式:</label>
+                <select id="notebook-type" onchange="updateNotebookType(this.value)" style="background: transparent; border: none; color: #1a73e8; font-weight: bold; padding: 8px 0; cursor: pointer;">
+                    <option value="line">高年級 (單行)</option>
+                    <option value="grid">低年級 (方格)</option>
+                </select>
+            </div>
+            <button onclick="addNewPage()" style="background-color: #34a853;">➕ 加頁</button>
+        </div>
+
+        <!-- 檔案操作與設定 -->
+        <div class="control-group">
+            <button onclick="toggleFullScreen()" id="btn-fullscreen" style="background-color: #5f6368;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="white" style="vertical-align: middle;"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> 全螢幕
+            </button>
+            <button onclick="window.print()" style="background-color: #5f6368;">🖨️ PDF</button>
+            
+            <button onclick="resetNotebook()" style="background-color: #ea4335;">🔄 重置</button>
+            <button onclick="clearAllText()" style="background-color: #fbbc04; color: #333;">🗑️ 文字</button>
+        </div>
+
+        <!-- 儲存控制 -->
+        <div class="control-group">
+            <!-- 手動儲存按鈕 -->
+            <button onclick="manualSave()" style="background-color: #1a73e8;" title="立即儲存">💾 儲存</button>
+            
+            <!-- 自動儲存開關 -->
+            <div style="display: flex; align-items: center; background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 5px 10px; margin-left: 5px;">
+                <input type="checkbox" id="auto-save-check" onchange="toggleAutoSave(this.checked)">
+                <label for="auto-save-check" style="margin-left: 5px; font-size: 14px; cursor: pointer; color: #555;">自動儲存</label>
+            </div>
+            
+            <!-- 狀態顯示 -->
+            <span id="save-status"></span>
+        </div>
+    </div>
+
+    <div id="zoom-wrapper">
+        <div class="notebook-container" id="notebook-container">
+            <!-- 內容會由 JS 自動生成或載入 -->
+        </div>
+    </div>
+
+    <script>
+        // === 全域變數 ===
+        let currentMode = 'type'; 
+        let currentTool = 'pen'; 
+        let currentColor = 'black';
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let lineWidth = 2;
+        let currentZoom = 1;
+        let activeCanvasId = null; 
+        let defaultPageType = 'line'; 
+        let isAutoSaveEnabled = false; // 預設關閉
+
+        // 復原/重做 堆疊
+        const undoStacks = {};
+        const redoStacks = {};
+        const MAX_HISTORY = 20;
+
+        let saveTimeout;
+        const STORAGE_KEY = 'digital_notebook_data_v5';
+
+        // === 1. 初始化 ===
+        window.onload = function() {
+            if (!loadData()) {
+                addNewPage(defaultPageType, false);
+                addNewPage(defaultPageType, false);
+            } else {
+                document.getElementById('notebook-type').value = defaultPageType;
+            }
+            
+            // 綁定事件，根據設定觸發自動儲存
+            document.body.addEventListener('input', triggerAutoSave);
+            document.addEventListener('keydown', handleShortcuts);
+        };
+        
+        // === 2. 頁面生成 ===
+        function generateLinesHTML(type) {
+            let html = '';
+            for (let i = 0; i < 23; i++) {
+                if (type === 'line') {
+                    html += `
+                    <div class="line-row line-type">
+                        <div class="line-cell line-left" contenteditable="true"></div>
+                        <div class="line-cell line-right" contenteditable="true"></div>
+                    </div>`;
+                } else if (type === 'grid') {
+                    html += `
+                    <div class="line-row grid-row">
+                        <div class="line-cell line-left-grid" contenteditable="true"></div>
+                        <div class="line-cell line-left-grid" contenteditable="true"></div>
+                        <div class="line-cell line-left-grid" contenteditable="true"></div>
+                        <div class="line-cell line-right-main" contenteditable="true"></div>
+                        <div class="line-right-grid-group">
+                            <div class="line-cell line-right-grid" contenteditable="true"></div>
+                            <div class="line-cell line-right-grid" contenteditable="true"></div>
+                            <div class="line-cell line-right-grid" contenteditable="true"></div>
+                            <div class="line-cell line-right-grid" contenteditable="true"></div>
+                            <div class="line-cell line-right-grid" contenteditable="true"></div>
+                            <div class="line-cell line-right-grid" contenteditable="true"></div>
+                        </div>
+                    </div>`;
+                }
+            }
+            return html;
+        }
+
+        function updateNotebookType(type) {
+            defaultPageType = type;
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => {
+                const oldType = page.getAttribute('data-page-type');
+                if (oldType === type) return;
+
+                const rowsText = [];
+                const oldRows = page.querySelectorAll('.line-row');
+                oldRows.forEach(row => {
+                    let lText = '';
+                    let rText = '';
+                    if (row.classList.contains('line-type')) {
+                        lText = row.querySelector('.line-left').innerText;
+                        rText = row.querySelector('.line-right').innerText;
+                    } else {
+                        const lCells = row.querySelectorAll('.line-left-grid');
+                        lText = Array.from(lCells).map(c => c.innerText).join('');
+                        const rMain = row.querySelector('.line-right-main').innerText;
+                        const rGridCells = row.querySelectorAll('.line-right-grid');
+                        const rGridText = Array.from(rGridCells).map(c => c.innerText).join('');
+                        rText = rMain + rGridText;
+                    }
+                    rowsText.push({ l: lText, r: rText });
+                });
+
+                page.setAttribute('data-page-type', type);
+                const contentDiv = page.querySelector('.page-content');
+                contentDiv.innerHTML = generateLinesHTML(type);
+                
+                const newRows = contentDiv.querySelectorAll('.line-row');
+                newRows.forEach((row, idx) => {
+                    if (!rowsText[idx]) return;
+                    const txt = rowsText[idx];
+                    if (type === 'line') {
+                        row.querySelector('.line-left').innerText = txt.l;
+                        row.querySelector('.line-right').innerText = txt.r;
+                    } else {
+                        const lCells = row.querySelectorAll('.line-left-grid');
+                        if(lCells[0]) lCells[0].innerText = txt.l;
+                        const rMain = row.querySelector('.line-right-main');
+                        if(rMain) rMain.innerText = txt.r;
+                    }
+                });
+            });
+            triggerAutoSave(); 
+        }
+
+        function addNewPage(type, restoreMode = false) {
+            const pageType = type || defaultPageType;
+            const container = document.getElementById('notebook-container');
+            const currentPages = document.querySelectorAll('.page').length;
+            const newPageNum = currentPages + 1;
+            const canvasId = `canvas-${newPageNum}`;
+            const linesId = `lines-${newPageNum}`;
+            const pageId = `page-${newPageNum}`;
+
+            const pageDiv = document.createElement('div');
+            pageDiv.className = `page ${currentMode === 'type' ? 'typing-mode' : ''}`;
+            pageDiv.id = pageId;
+            pageDiv.setAttribute('data-page-num', newPageNum);
+            pageDiv.setAttribute('data-page-type', pageType);
+            
+            pageDiv.innerHTML = `
+                <canvas id="${canvasId}" class="drawing-layer"></canvas>
+                <div class="red-margin-line"></div>
+                <div class="page-header">
+                    <div class="header-left" contenteditable="true"></div>
+                    <div class="header-right" contenteditable="true"></div>
+                </div>
+                <div class="page-content" id="${linesId}">
+                    ${generateLinesHTML(pageType)}
+                </div>
+                <div class="page-footer"><div class="footer-text">- ${newPageNum} -</div></div>
+            `;
+
+            container.appendChild(pageDiv);
+            undoStacks[canvasId] = [];
+            redoStacks[canvasId] = [];
+            const newCanvas = document.getElementById(canvasId);
+            initSingleCanvas(newCanvas);
+            setZoom(currentZoom);
+            if (!restoreMode) {
+                pageDiv.scrollIntoView({ behavior: 'smooth' });
+                triggerAutoSave();
+            }
+        }
+
+        function initSingleCanvas(canvas) {
+            if(canvas.getAttribute('data-init') === 'true') return;
+            const parent = canvas.parentElement;
+            const rect = parent.getBoundingClientRect();
+            const scale = Math.min(window.devicePixelRatio || 2, 2); 
+            canvas.width = rect.width * scale;
+            canvas.height = rect.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            addDrawingEvents(canvas);
+            canvas.setAttribute('data-init', 'true');
+        }
+
+        // === 3. 繪圖與 Undo/Redo ===
+        function saveState(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            if (!undoStacks[canvasId]) undoStacks[canvasId] = [];
+            undoStacks[canvasId].push(imageData);
+            if (undoStacks[canvasId].length > MAX_HISTORY) undoStacks[canvasId].shift(); 
+            redoStacks[canvasId] = [];
+        }
+
+        function undo() {
+            const targetId = activeCanvasId || 'canvas-1';
+            const stack = undoStacks[targetId];
+            const redoStack = redoStacks[targetId];
+            if (stack && stack.length > 0) {
+                const canvas = document.getElementById(targetId);
+                const ctx = canvas.getContext('2d');
+                const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                redoStack.push(currentData);
+                const previousData = stack.pop();
+                ctx.putImageData(previousData, 0, 0);
+                triggerAutoSave();
+            }
+        }
+
+        function redo() {
+            const targetId = activeCanvasId || 'canvas-1';
+            const stack = undoStacks[targetId];
+            const redoStack = redoStacks[targetId];
+            if (redoStack && redoStack.length > 0) {
+                const canvas = document.getElementById(targetId);
+                const ctx = canvas.getContext('2d');
+                const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                stack.push(currentData);
+                const nextData = redoStack.pop();
+                ctx.putImageData(nextData, 0, 0);
+                triggerAutoSave();
+            }
+        }
+
+        function addDrawingEvents(canvas) {
+            const ctx = canvas.getContext('2d');
+            const canvasId = canvas.id;
+            
+            const startDraw = (e) => {
+                if (currentMode !== 'draw') return;
+                activeCanvasId = canvasId; 
+                saveState(canvasId);
+                isDrawing = true;
+                const { x, y } = getPos(e, canvas);
+                [lastX, lastY] = [x, y];
+            };
+            
+            const draw = (e) => {
+                if (!isDrawing || currentMode !== 'draw') return;
+                if(e.type.includes('touch')) e.preventDefault(); 
+                const { x, y } = getPos(e, canvas);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, y);
+                
+                if (currentTool === 'eraser') {
+                    ctx.globalCompositeOperation = 'destination-out';
+                    ctx.lineWidth = 20; 
+                } else {
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.strokeStyle = currentColor;
+                    ctx.lineWidth = lineWidth; 
+                }
+                ctx.stroke();
+                [lastX, lastY] = [x, y];
+            };
+            
+            const stopDraw = () => {
+                if (isDrawing) {
+                    isDrawing = false;
+                    triggerAutoSave(); 
+                }
+            };
+
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDraw);
+            canvas.addEventListener('mouseout', stopDraw);
+            canvas.addEventListener('touchstart', startDraw, {passive: false});
+            canvas.addEventListener('touchmove', draw, {passive: false});
+            canvas.addEventListener('touchend', stopDraw);
+        }
+
+        function getPos(e, canvas) {
+            const rect = canvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (e.changedTouches) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            return { 
+                x: (clientX - rect.left) / currentZoom, 
+                y: (clientY - rect.top) / currentZoom 
+            };
+        }
+
+        function handleShortcuts(e) {
+            if (currentMode === 'draw' && (e.ctrlKey || e.metaKey)) {
+                if (e.key === 'z') { e.preventDefault(); undo(); } 
+                else if (e.key === 'y') { e.preventDefault(); redo(); }
+            }
+        }
+
+        // === 4. 儲存控制邏輯 ===
+        
+        // 切換自動儲存
+        function toggleAutoSave(checked) {
+            isAutoSaveEnabled = checked;
+            const status = document.getElementById('save-status');
+            if (checked) {
+                status.style.opacity = '1';
+                status.innerText = '自動儲存已開啟';
+                status.style.color = '#28a745';
+                triggerAutoSave(); // 立即觸發一次
+                setTimeout(() => { status.style.opacity = '0'; }, 2000);
+            } else {
+                status.style.opacity = '1';
+                status.innerText = '自動儲存已關閉';
+                status.style.color = '#ea4335';
+                setTimeout(() => { status.style.opacity = '0'; }, 2000);
+            }
+        }
+
+        // 觸發自動儲存 (僅當開啟時)
+        function triggerAutoSave() {
+            if (!isAutoSaveEnabled) return;
+            
+            const status = document.getElementById('save-status');
+            status.style.opacity = '0.5';
+            status.innerText = '自動儲存中...';
+            status.style.color = '#28a745';
+            
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                performSave(true);
+            }, 1000); 
+        }
+
+        // 手動儲存
+        function manualSave() {
+            performSave(false);
+        }
+
+        // 執行儲存動作 (isAuto: 是否為自動觸發)
+        function performSave(isAuto) {
+            const pagesData = [];
+            const pages = document.querySelectorAll('.page');
+            
+            pages.forEach(page => {
+                const pageId = page.id;
+                const type = page.getAttribute('data-page-type') || 'line';
+                const headerHTML = page.querySelector('.page-header').innerHTML;
+                const contentHTML = page.querySelector('.page-content').innerHTML; 
+                const canvas = page.querySelector('.drawing-layer');
+                const canvasData = canvas.toDataURL();
+                
+                pagesData.push({
+                    id: pageId,
+                    type: type,
+                    header: headerHTML,
+                    content: contentHTML,
+                    drawing: canvasData
+                });
+            });
+
+            const data = {
+                version: 5,
+                notebookType: defaultPageType, 
+                zoom: currentZoom,
+                fontSize: getComputedStyle(document.documentElement).getPropertyValue('--user-font-size'),
+                pages: pagesData
+            };
+
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                const status = document.getElementById('save-status');
+                status.style.opacity = '1';
+                status.style.color = '#28a745';
+                status.innerText = isAuto ? '💾 已自動儲存' : '💾 已手動儲存';
+                setTimeout(() => { status.style.opacity = '0'; }, 2000);
+            } catch (e) {
+                console.error('Storage full', e);
+                alert('⚠️ 警告：儲存空間已滿，無法儲存。');
+            }
+        }
+
+        function loadData() {
+            const json = localStorage.getItem(STORAGE_KEY);
+            if (!json) return false;
+            
+            try {
+                const data = JSON.parse(json);
+                if (data.zoom) setZoom(data.zoom);
+                if (data.fontSize) document.documentElement.style.setProperty('--user-font-size', data.fontSize);
+                if (data.notebookType) defaultPageType = data.notebookType; 
+                
+                data.pages.forEach(pageData => {
+                    addNewPage(pageData.type, true); 
+                    const pages = document.querySelectorAll('.page');
+                    const currentPage = pages[pages.length - 1];
+                    
+                    currentPage.querySelector('.page-header').innerHTML = pageData.header;
+                    currentPage.querySelector('.page-content').innerHTML = pageData.content;
+                    
+                    const canvas = currentPage.querySelector('.drawing-layer');
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.save();
+                        ctx.setTransform(1, 0, 0, 1, 0, 0);
+                        ctx.drawImage(img, 0, 0);
+                        ctx.restore();
+                        saveState(canvas.id); 
+                    };
+                    img.src = pageData.drawing;
+                });
+                return true;
+            } catch (e) {
+                console.error('Load failed', e);
+                return false;
+            }
+        }
+
+        // === 5. 其他工具與介面 ===
+        function resetNotebook() {
+            if (confirm("⚠️ 警告：這將會刪除所有的頁面、文字和筆跡，並且重新開始。\n\n確定要重置嗎？")) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+
+        function setZoom(val) {
+            val = parseFloat(val);
+            currentZoom = val;
+            const zoomDisplay = document.getElementById('zoom-val');
+            if (zoomDisplay) zoomDisplay.innerText = Math.round(val * 100) + '%';
+            const wrapper = document.getElementById('zoom-wrapper');
+            const container = document.getElementById('notebook-container');
+            if (wrapper) wrapper.style.transform = `scale(${val})`;
+            if (container && wrapper) {
+                const originalHeight = container.offsetHeight; 
+                const originalWidth = container.offsetWidth;
+                wrapper.style.marginBottom = (originalHeight * (val - 1)) + 'px';
+                const scaledWidth = originalWidth * val;
+                if (scaledWidth > window.innerWidth) {
+                    document.body.style.minWidth = scaledWidth + 'px';
+                } else {
+                    document.body.style.minWidth = 'auto';
+                }
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-type').classList.toggle('active', mode === 'type');
+            document.getElementById('btn-draw').classList.toggle('active', mode === 'draw');
+            document.getElementById('draw-tools').style.display = mode === 'draw' ? 'flex' : 'none';
+            document.getElementById('type-tools').style.display = mode === 'type' ? 'flex' : 'none';
+            
+            const allPages = document.querySelectorAll('.page');
+            allPages.forEach(page => {
+                if (mode === 'type') {
+                    page.classList.add('typing-mode');
+                } else {
+                    page.classList.remove('typing-mode');
+                }
+            });
+        }
+
+        function setPenColor(color, btn) {
+            currentColor = color;
+            setTool('pen'); 
+            document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.getElementById('tool-pen').classList.toggle('active', tool === 'pen');
+            document.getElementById('tool-eraser').classList.toggle('active', tool === 'eraser');
+        }
+
+        function clearCanvas() {
+            if(confirm("確定要清除所有手寫筆跡嗎？")) {
+                const allCanvases = document.querySelectorAll('.drawing-layer');
+                allCanvases.forEach(canvas => {
+                    const ctx = canvas.getContext('2d');
+                    ctx.save();
+                    ctx.setTransform(1, 0, 0, 1, 0, 0); 
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.restore();
+                    saveState(canvas.id);
+                });
+                triggerAutoSave();
+            }
+        }
+        
+        function clearAllText() {
+            if(confirm("確定要清除所有輸入文字嗎？")) {
+                document.querySelectorAll('.line-cell, .header-left, .header-right').forEach(div => {
+                    div.innerText = '';
+                });
+                triggerAutoSave();
+            }
+        }
+
+        function updateFontSize(val) {
+            document.documentElement.style.setProperty('--user-font-size', val + 'px');
+            triggerAutoSave();
+        }
+        
+        function updateLineWidth(val) {
+            lineWidth = parseInt(val);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            const target = e.target;
+            const isLineCell = target.classList.contains('line-cell');
+            const isHeader = target.classList.contains('header-left') || target.classList.contains('header-right');
+
+            if (!isLineCell && !isHeader) return;
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (isHeader) {
+                     const page = target.closest('.page');
+                     const firstCell = page.querySelector('.line-cell');
+                     if (firstCell) firstCell.focus();
+                     return;
+                }
+                const currentRow = target.closest('.line-row');
+                const nextRow = currentRow.nextElementSibling;
+                if (nextRow && nextRow.classList.contains('line-row')) {
+                    const allCellsInRow = Array.from(currentRow.querySelectorAll('.line-cell'));
+                    const cellIndex = allCellsInRow.indexOf(target);
+                    const allCellsInNextRow = Array.from(nextRow.querySelectorAll('.line-cell'));
+                    const targetCell = allCellsInNextRow[cellIndex] || allCellsInNextRow[allCellsInNextRow.length - 1];
+                    if (targetCell) targetCell.focus();
+                }
+                return;
+            }
+
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (isHeader) {
+                    if (e.key === 'ArrowDown') {
+                        const page = target.closest('.page');
+                        const firstCell = page.querySelector('.line-cell');
+                        if (firstCell) firstCell.focus();
+                    }
+                    return;
+                }
+                const currentRow = target.closest('.line-row');
+                const allCellsInRow = Array.from(currentRow.querySelectorAll('.line-cell'));
+                const cellIndex = allCellsInRow.indexOf(target);
+                let targetRow;
+                if (e.key === 'ArrowUp') {
+                    targetRow = currentRow.previousElementSibling;
+                    if (!targetRow || !targetRow.classList.contains('line-row')) {
+                        const page = target.closest('.page');
+                        if (target.classList.contains('line-left') || target.classList.contains('line-left-grid')) {
+                             page.querySelector('.header-left').focus();
+                        } else {
+                             page.querySelector('.header-right').focus();
+                        }
+                        return;
+                    }
+                } else { 
+                     targetRow = currentRow.nextElementSibling;
+                }
+                if (targetRow && targetRow.classList.contains('line-row')) {
+                    const allCellsInTargetRow = Array.from(targetRow.querySelectorAll('.line-cell'));
+                    const targetCell = allCellsInTargetRow[cellIndex] || allCellsInTargetRow[allCellsInTargetRow.length - 1];
+                    if (targetCell) targetCell.focus();
+                }
+                return;
+            }
+
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                const sel = window.getSelection();
+                if (!sel.rangeCount || sel.type !== 'Caret') return;
+                const len = target.innerText.length;
+                const start = (sel.anchorOffset === 0);
+                const end = (sel.anchorOffset === len);
+
+                if (isHeader) {
+                    if (target.classList.contains('header-right') && e.key === 'ArrowLeft' && start) {
+                        e.preventDefault(); target.parentElement.querySelector('.header-left').focus();
+                    }
+                    if (target.classList.contains('header-left') && e.key === 'ArrowRight' && end) {
+                        e.preventDefault(); target.parentElement.querySelector('.header-right').focus();
+                    }
+                    return;
+                }
+
+                const currentRow = target.closest('.line-row');
+                const allCellsInRow = Array.from(currentRow.querySelectorAll('.line-cell'));
+                const cellIndex = allCellsInRow.indexOf(target);
+
+                if (e.key === 'ArrowLeft' && start) {
+                    if (cellIndex > 0) {
+                        e.preventDefault();
+                        allCellsInRow[cellIndex - 1].focus();
+                    }
+                }
+                if (e.key === 'ArrowRight' && end) {
+                    if (cellIndex < allCellsInRow.length - 1) {
+                        e.preventDefault();
+                        allCellsInRow[cellIndex + 1].focus();
+                    }
+                }
+            }
+        });
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+    </script>
+
+</body>
+</html>
