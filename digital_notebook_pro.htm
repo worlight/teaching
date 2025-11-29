@@ -30,6 +30,113 @@
             overflow: auto; 
         }
 
+        /* --- 分數樣式 --- */
+        .fraction-group {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 4px;
+            user-select: none;
+        }
+        .frac-integer {
+            min-width: 15px;
+            text-align: center;
+            margin-right: 2px;
+            outline: none;
+            cursor: text;
+        }
+        .frac-integer:empty::after {
+            content: "";
+            display: inline-block;
+        }
+
+        .frac-part {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            vertical-align: middle;
+        }
+        .frac-num {
+            border-bottom: 2px solid currentColor;
+            padding: 0 2px;
+            text-align: center;
+            min-width: 15px;
+            outline: none;
+            line-height: 1.1;
+            width: 100%;
+            cursor: text;
+        }
+        .frac-den {
+            padding: 0 2px;
+            text-align: center;
+            min-width: 15px;
+            outline: none;
+            line-height: 1.1;
+            width: 100%;
+            cursor: text;
+        }
+        .frac-integer:focus, .frac-num:focus, .frac-den:focus {
+            background-color: rgba(255, 235, 59, 0.3);
+        }
+
+        /* --- 快捷鍵說明 Modal 樣式 --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 200;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 90%;
+            position: relative;
+            text-align: left;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+        .close-modal:hover { color: black; }
+        .shortcut-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+        .shortcut-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .key-badge {
+            background: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            border: 1px solid #ccc;
+            font-size: 0.9em;
+            color: #333;
+        }
+
         /* --- 控制面板 --- */
         .controls {
             margin-bottom: 20px;
@@ -79,7 +186,7 @@
             background-color: #fff;
             color: #333;
             border: 1px solid #ddd;
-            padding-right: 25px; /* for arrow */
+            padding-right: 25px; 
         }
 
         button:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -95,13 +202,26 @@
             color: #555;
             border: 1px solid #ddd;
         }
-        
         button.tool-btn.active {
             background-color: #e8f0fe;
             color: #1967d2;
             border-color: #1967d2;
         }
-        
+        button.symbol-btn {
+            padding: 5px 10px;
+            font-family: "Times New Roman", serif; 
+            font-size: 18px;
+            min-width: 36px;
+            justify-content: center;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            color: #333;
+        }
+        button.symbol-btn:hover {
+            background-color: #e1bee7;
+            border-color: #9c27b0;
+            color: #4a148c;
+        }
         button:disabled {
             background-color: #ccc;
             cursor: not-allowed;
@@ -119,7 +239,6 @@
         .color-dot:hover { transform: scale(1.2); }
         .color-dot.active { border-color: #333; box-shadow: 0 0 0 2px white, 0 0 0 4px #ccc; }
 
-        /* 儲存狀態提示 */
         #save-status {
             font-size: 12px;
             color: #28a745;
@@ -171,7 +290,6 @@
             touch-action: none;
             cursor: crosshair;
         }
-
         .page.typing-mode .drawing-layer {
             pointer-events: none;
             cursor: default;
@@ -200,31 +318,24 @@
             align-items: stretch;
             z-index: 5;
         }
-        
-        .header-left {
-            width: 30mm;
-            display: flex;
-            align-items: flex-end; 
-            justify-content: flex-end; 
-            padding-right: 2mm;
+        .header-left, .header-right {
+            display: grid;
+            align-content: end;
             padding-bottom: 2mm;
             box-sizing: border-box;
             outline: none;
             font-size: 20px;
             color: #333;
         }
-
+        .header-left {
+            width: 30mm;
+            justify-content: end;
+            padding-right: 2mm;
+        }
         .header-right {
             flex: 1;
-            display: flex;
-            align-items: flex-end; 
-            justify-content: flex-start; 
+            justify-content: start;
             padding-left: 2mm;
-            padding-bottom: 2mm;
-            box-sizing: border-box;
-            outline: none;
-            font-size: 20px;
-            color: #333;
         }
 
         /* --- 中間內容區 --- */
@@ -251,10 +362,9 @@
         .line-cell {
             outline: none;
             display: flex;
-            align-items: end;
+            align-items: center; /* 垂直置中 */
             box-sizing: border-box;
         }
-        /* 聚焦效果 */
         .line-cell:focus, .header-left:focus, .header-right:focus {
             background-color: rgba(66, 133, 244, 0.05);
         }
@@ -268,14 +378,37 @@
             color: #555;
             font-size: 0.9em; 
         }
-
         .line-row.line-type .line-right {
             flex: 1; 
             padding-left: 2mm; 
             padding-right: 10mm;
         }
 
-        /* --- 新版方格樣式 (低年級) --- */
+        /* --- 空白頁樣式 (純白) --- */
+        .page.blank-page .page-header,
+        .page.blank-page .red-margin-line {
+            display: none !important; /* 隱藏 Header 和 紅線 */
+        }
+        
+        /* 空白頁的內容區 */
+        .blank-sheet {
+            width: 100%;
+            height: 100%;
+            padding: 2cm; /* 類似 Word 的邊距 */
+            box-sizing: border-box;
+            outline: none;
+            white-space: pre-wrap; /* 保留換行 */
+            overflow: hidden;
+            font-size: var(--user-font-size);
+            line-height: 1.5;
+            color: #333;
+            cursor: text;
+        }
+        .blank-sheet:focus {
+            background-color: rgba(66, 133, 244, 0.01);
+        }
+
+        /* --- 方格樣式 (低年級 & 全方格) --- */
         .grid-row .line-left-grid,
         .grid-row .line-right-main,
         .grid-row .line-right-grid {
@@ -307,6 +440,22 @@
         }
         .line-right-grid:last-child {
             border-right: none;
+        }
+        
+        /* --- 全方格樣式 (Full Grid) --- */
+        .line-right-full-grid-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden; 
+        }
+        .line-full-grid-cell {
+            width: 10mm;
+            min-width: 10mm;
+            justify-content: center;
+            border-right: 1px solid var(--line-color);
+        }
+        .line-full-grid-cell:last-child {
+            border-right: none; 
         }
 
         .page-footer {
@@ -346,6 +495,32 @@
         <div class="control-group">
             <button id="btn-type" class="active" onclick="setMode('type')">⌨️ 打字</button>
             <button id="btn-draw" onclick="setMode('draw')">✏️ 手寫</button>
+            <button onclick="toggleMathSymbols()" style="background-color: #673ab7; color: white;" title="顯示/隱藏數學符號">🔢 數學符號</button>
+        </div>
+
+        <!-- 數學符號工具列 -->
+        <div class="control-group" id="math-tools" style="display: none; width: 100%; background: #f3e5f5; border: 1px solid #e1bee7; margin-top: 5px;">
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('+')">+</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('-')">-</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('×')">×</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('÷')">÷</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('=')">=</button>
+            <div style="width: 1px; height: 15px; background: #999; margin: 0 5px;"></div>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('>')">&gt;</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('<')">&lt;</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('≥')">≥</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('≤')">≤</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('≠')">≠</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('≈')">≈</button>
+            <div style="width: 1px; height: 15px; background: #999; margin: 0 5px;"></div>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('(')">(</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol(')')">)</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('.')">.</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('%')">%</button>
+            <button class="tool-btn symbol-btn" onclick="insertSymbol('²')" title="平方">x²</button>
+            <button class="tool-btn symbol-btn" onclick="insertFraction()" title="插入分數 (帶分數/分數)">xy/z</button>
+            <!-- 快捷鍵說明按鈕 (New) -->
+            <button class="tool-btn symbol-btn" onclick="showShortcutHelp()" title="快捷鍵說明" style="background-color: #e3f2fd; color: #1565c0; font-size: 14px;">⌨️ 說明</button>
         </div>
 
         <!-- 繪圖工具 -->
@@ -353,21 +528,15 @@
             <div class="color-dot active" style="background: black;" onclick="setPenColor('black', this)"></div>
             <div class="color-dot" style="background: #ea4335;" onclick="setPenColor('#ea4335', this)"></div>
             <div class="color-dot" style="background: #1a73e8;" onclick="setPenColor('#1a73e8', this)"></div>
-            
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
-            
             <button class="tool-btn active" id="tool-pen" onclick="setTool('pen')">筆刷</button>
             <button class="tool-btn" id="tool-eraser" onclick="setTool('eraser')">橡皮擦</button>
-            
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
             <label style="font-size: 14px;">粗細:</label>
             <input type="range" min="1" max="10" value="2" style="width: 60px;" oninput="updateLineWidth(this.value)" title="調整筆畫粗細">
-
-            <!-- Undo/Redo -->
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
             <button class="tool-btn" onclick="undo()" title="復原 (Ctrl+Z)">↩️ 復原</button>
             <button class="tool-btn" onclick="redo()" title="重做 (Ctrl+Y)">↪️ 重做</button>
-
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
             <button class="tool-btn" onclick="clearCanvas()" style="color: #ea4335;">清空筆跡</button>
         </div>
@@ -390,6 +559,8 @@
                 <select id="notebook-type" onchange="updateNotebookType(this.value)" style="background: transparent; border: none; color: #1a73e8; font-weight: bold; padding: 8px 0; cursor: pointer;">
                     <option value="line">高年級 (單行)</option>
                     <option value="grid">低年級 (方格)</option>
+                    <option value="full-grid">全方格 (Full Grid)</option>
+                    <option value="blank">純空白 (Blank)</option>
                 </select>
             </div>
             <button onclick="addNewPage()" style="background-color: #34a853;">➕ 加頁</button>
@@ -401,23 +572,17 @@
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="white" style="vertical-align: middle;"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> 全螢幕
             </button>
             <button onclick="window.print()" style="background-color: #5f6368;">🖨️ PDF</button>
-            
             <button onclick="resetNotebook()" style="background-color: #ea4335;">🔄 重置</button>
             <button onclick="clearAllText()" style="background-color: #fbbc04; color: #333;">🗑️ 文字</button>
         </div>
 
         <!-- 儲存控制 -->
         <div class="control-group">
-            <!-- 手動儲存按鈕 -->
             <button onclick="manualSave()" style="background-color: #1a73e8;" title="立即儲存">💾 儲存</button>
-            
-            <!-- 自動儲存開關 -->
             <div style="display: flex; align-items: center; background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 5px 10px; margin-left: 5px;">
                 <input type="checkbox" id="auto-save-check" onchange="toggleAutoSave(this.checked)">
                 <label for="auto-save-check" style="margin-left: 5px; font-size: 14px; cursor: pointer; color: #555;">自動儲存</label>
             </div>
-            
-            <!-- 狀態顯示 -->
             <span id="save-status"></span>
         </div>
     </div>
@@ -425,6 +590,26 @@
     <div id="zoom-wrapper">
         <div class="notebook-container" id="notebook-container">
             <!-- 內容會由 JS 自動生成或載入 -->
+        </div>
+    </div>
+
+    <!-- 快捷鍵說明 Modal (New) -->
+    <div id="shortcut-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeShortcutHelp()">&times;</span>
+            <h3 style="margin-top: 0; color: #1a73e8; border-bottom: 2px solid #e8f0fe; padding-bottom: 10px;">⌨️ 數學符號快捷鍵</h3>
+            <ul class="shortcut-list">
+                <li><span>乘號 (×)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">x</span></span></li>
+                <li><span>除號 (÷)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">/</span></span></li>
+                <li><span>分數 (xy/z)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">Shift</span> + <span class="key-badge">F</span></span></li>
+                <li><span>大於等於 (≥)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">&gt;</span></span></li>
+                <li><span>小於等於 (≤)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">&lt;</span></span></li>
+                <li><span>平方 (²)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">2</span></span></li>
+                <li><span>約等於 (≈)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">`</span> (頓號鍵)</span></li>
+            </ul>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="closeShortcutHelp()" style="background-color: #4285f4; color: white; padding: 8px 25px; border-radius: 20px;">知道了</button>
+            </div>
         </div>
     </div>
 
@@ -439,15 +624,15 @@
         let currentZoom = 1;
         let activeCanvasId = null; 
         let defaultPageType = 'line'; 
-        let isAutoSaveEnabled = false; // 預設關閉
+        let isAutoSaveEnabled = false; 
+        let lastFocusedInput = null; 
 
-        // 復原/重做 堆疊
         const undoStacks = {};
         const redoStacks = {};
         const MAX_HISTORY = 20;
 
         let saveTimeout;
-        const STORAGE_KEY = 'digital_notebook_data_v5';
+        const STORAGE_KEY = 'digital_notebook_data_v6';
 
         // === 1. 初始化 ===
         window.onload = function() {
@@ -457,14 +642,133 @@
             } else {
                 document.getElementById('notebook-type').value = defaultPageType;
             }
-            
-            // 綁定事件，根據設定觸發自動儲存
-            document.body.addEventListener('input', triggerAutoSave);
             document.addEventListener('keydown', handleShortcuts);
+            document.addEventListener('keydown', handleMathHotkeys);
+            
+            // 監聽所有輸入格的 Focus 事件，記住最後一個位置
+            document.addEventListener('focusin', (e) => {
+                const t = e.target;
+                if (t.getAttribute('contenteditable') === 'true' || t.tagName === 'BUTTON') {
+                    if (t.getAttribute('contenteditable') === 'true') {
+                        lastFocusedInput = t;
+                    }
+                }
+            });
+            
+            // 點擊 Modal 外部關閉
+            window.onclick = function(event) {
+                const modal = document.getElementById('shortcut-modal');
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
         };
         
+        // ... (Math Tools functions) ...
+        function handleMathHotkeys(e) {
+            if (!lastFocusedInput || !e.altKey) return;
+            let symbol = '';
+            if (e.key === 'x' || e.key === 'X') symbol = '×';
+            else if (e.key === '/') symbol = '÷';
+            else if (e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+                e.preventDefault(); insertFraction(); return;
+            }
+            else if (e.key === '>') symbol = '≥';
+            else if (e.key === '<') symbol = '≤';
+            else if (e.key === '2') symbol = '²';
+            else if (e.key === '`') symbol = '≈';
+
+            if (symbol) {
+                e.preventDefault();
+                insertSymbol(symbol);
+            }
+        }
+
+        function toggleMathSymbols() {
+            const mathTools = document.getElementById('math-tools');
+            mathTools.style.display = mathTools.style.display === 'none' ? 'flex' : 'none';
+        }
+        
+        // === 快捷鍵說明 Modal 控制 (New) ===
+        function showShortcutHelp() {
+            document.getElementById('shortcut-modal').style.display = 'flex';
+        }
+        function closeShortcutHelp() {
+            document.getElementById('shortcut-modal').style.display = 'none';
+        }
+
+        function insertSymbol(symbol) {
+            if (!lastFocusedInput) { alert("請先點選要輸入的格子"); return; }
+            lastFocusedInput.focus();
+            document.execCommand('insertText', false, symbol);
+            triggerAutoSave();
+            
+            if (isGridCell(lastFocusedInput)) {
+                setTimeout(() => {
+                    if (lastFocusedInput.innerText.trim().length > 0) {
+                        moveToNextCell(lastFocusedInput);
+                    }
+                }, 10);
+            }
+        }
+
+        function insertFraction() {
+            if (!lastFocusedInput) { alert("請先點選要輸入的格子"); return; }
+            lastFocusedInput.focus();
+            const container = document.createElement("span");
+            container.className = "fraction-group";
+            container.contentEditable = "false"; 
+            
+            const integerPart = document.createElement("span");
+            integerPart.className = "frac-integer";
+            integerPart.contentEditable = "true";
+            
+            const fracPart = document.createElement("span");
+            fracPart.className = "frac-part";
+            
+            const numerator = document.createElement("span");
+            numerator.className = "frac-num";
+            numerator.contentEditable = "true";
+            
+            const denominator = document.createElement("span");
+            denominator.className = "frac-den";
+            denominator.contentEditable = "true";
+            
+            fracPart.appendChild(numerator);
+            fracPart.appendChild(denominator);
+            container.appendChild(integerPart);
+            container.appendChild(fracPart);
+            
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(container);
+                const space = document.createTextNode("\u00A0");
+                range.setStartAfter(container);
+                range.insertNode(space);
+                const newRange = document.createRange();
+                newRange.selectNodeContents(integerPart);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+            }
+            triggerAutoSave();
+        }
+
+        // Helper check for grid cells
+        function isGridCell(el) {
+            return el.classList.contains('line-left-grid') || 
+                   el.classList.contains('line-right-grid') || 
+                   el.classList.contains('line-full-grid-cell');
+        }
+
         // === 2. 頁面生成 ===
         function generateLinesHTML(type) {
+            if (type === 'blank') {
+                return '<div class="blank-sheet" contenteditable="true"></div>';
+            }
+
             let html = '';
             for (let i = 0; i < 23; i++) {
                 if (type === 'line') {
@@ -481,12 +785,17 @@
                         <div class="line-cell line-left-grid" contenteditable="true"></div>
                         <div class="line-cell line-right-main" contenteditable="true"></div>
                         <div class="line-right-grid-group">
-                            <div class="line-cell line-right-grid" contenteditable="true"></div>
-                            <div class="line-cell line-right-grid" contenteditable="true"></div>
-                            <div class="line-cell line-right-grid" contenteditable="true"></div>
-                            <div class="line-cell line-right-grid" contenteditable="true"></div>
-                            <div class="line-cell line-right-grid" contenteditable="true"></div>
-                            <div class="line-cell line-right-grid" contenteditable="true"></div>
+                            ${'<div class="line-cell line-right-grid" contenteditable="true"></div>'.repeat(6)}
+                        </div>
+                    </div>`;
+                } else if (type === 'full-grid') {
+                    html += `
+                    <div class="line-row grid-row">
+                        <div class="line-cell line-left-grid" contenteditable="true"></div>
+                        <div class="line-cell line-left-grid" contenteditable="true"></div>
+                        <div class="line-cell line-left-grid" contenteditable="true"></div>
+                        <div class="line-right-full-grid-container">
+                            ${'<div class="line-cell line-full-grid-cell" contenteditable="true"></div>'.repeat(17)}
                         </div>
                     </div>`;
                 }
@@ -501,43 +810,53 @@
                 const oldType = page.getAttribute('data-page-type');
                 if (oldType === type) return;
 
-                const rowsText = [];
-                const oldRows = page.querySelectorAll('.line-row');
-                oldRows.forEach(row => {
-                    let lText = '';
-                    let rText = '';
-                    if (row.classList.contains('line-type')) {
-                        lText = row.querySelector('.line-left').innerText;
-                        rText = row.querySelector('.line-right').innerText;
-                    } else {
-                        const lCells = row.querySelectorAll('.line-left-grid');
-                        lText = Array.from(lCells).map(c => c.innerText).join('');
-                        const rMain = row.querySelector('.line-right-main').innerText;
-                        const rGridCells = row.querySelectorAll('.line-right-grid');
-                        const rGridText = Array.from(rGridCells).map(c => c.innerText).join('');
-                        rText = rMain + rGridText;
-                    }
-                    rowsText.push({ l: lText, r: rText });
-                });
+                // 備份文字
+                let allText = "";
+                if (oldType === 'blank') {
+                    const sheet = page.querySelector('.blank-sheet');
+                    if (sheet) allText = sheet.innerText;
+                } else {
+                    const oldRows = page.querySelectorAll('.line-row');
+                    const lines = [];
+                    oldRows.forEach(row => {
+                        let rowText = row.innerText.replace(/\n/g, " "); 
+                        lines.push(rowText); 
+                    });
+                    allText = lines.join('\n');
+                }
 
                 page.setAttribute('data-page-type', type);
+                
+                const redLine = page.querySelector('.red-margin-line');
+                const header = page.querySelector('.page-header');
+                
+                if (type === 'blank') {
+                    page.classList.add('blank-page');
+                    if(redLine) redLine.style.display = 'none';
+                    if(header) header.style.borderBottom = 'none';
+                } else {
+                    page.classList.remove('blank-page');
+                    if(redLine) redLine.style.display = 'block';
+                    if(header) header.style.borderBottom = '1px solid var(--line-color)';
+                }
+
                 const contentDiv = page.querySelector('.page-content');
                 contentDiv.innerHTML = generateLinesHTML(type);
                 
-                const newRows = contentDiv.querySelectorAll('.line-row');
-                newRows.forEach((row, idx) => {
-                    if (!rowsText[idx]) return;
-                    const txt = rowsText[idx];
-                    if (type === 'line') {
-                        row.querySelector('.line-left').innerText = txt.l;
-                        row.querySelector('.line-right').innerText = txt.r;
-                    } else {
-                        const lCells = row.querySelectorAll('.line-left-grid');
-                        if(lCells[0]) lCells[0].innerText = txt.l;
-                        const rMain = row.querySelector('.line-right-main');
-                        if(rMain) rMain.innerText = txt.r;
-                    }
-                });
+                // 回填文字
+                if (type === 'blank') {
+                    const sheet = contentDiv.querySelector('.blank-sheet');
+                    if(sheet) sheet.innerText = allText;
+                } else {
+                    const lines = allText.split('\n');
+                    const newRows = contentDiv.querySelectorAll('.line-row');
+                    newRows.forEach((row, idx) => {
+                        if (idx < lines.length) {
+                            const firstInput = row.querySelector('[contenteditable="true"]');
+                            if (firstInput) firstInput.innerText = lines[idx];
+                        }
+                    });
+                }
             });
             triggerAutoSave(); 
         }
@@ -553,14 +872,18 @@
 
             const pageDiv = document.createElement('div');
             pageDiv.className = `page ${currentMode === 'type' ? 'typing-mode' : ''}`;
+            if (pageType === 'blank') pageDiv.classList.add('blank-page');
             pageDiv.id = pageId;
             pageDiv.setAttribute('data-page-num', newPageNum);
             pageDiv.setAttribute('data-page-type', pageType);
             
+            const redLineDisplay = pageType === 'blank' ? 'none' : 'block';
+            const headerBorder = pageType === 'blank' ? 'none' : '1px solid var(--line-color)';
+
             pageDiv.innerHTML = `
                 <canvas id="${canvasId}" class="drawing-layer"></canvas>
-                <div class="red-margin-line"></div>
-                <div class="page-header">
+                <div class="red-margin-line" style="display: ${redLineDisplay}"></div>
+                <div class="page-header" style="border-bottom: ${headerBorder}">
                     <div class="header-left" contenteditable="true"></div>
                     <div class="header-right" contenteditable="true"></div>
                 </div>
@@ -596,8 +919,6 @@
             addDrawingEvents(canvas);
             canvas.setAttribute('data-init', 'true');
         }
-
-        // === 3. 繪圖與 Undo/Redo ===
         function saveState(canvasId) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
@@ -608,7 +929,6 @@
             if (undoStacks[canvasId].length > MAX_HISTORY) undoStacks[canvasId].shift(); 
             redoStacks[canvasId] = [];
         }
-
         function undo() {
             const targetId = activeCanvasId || 'canvas-1';
             const stack = undoStacks[targetId];
@@ -623,7 +943,6 @@
                 triggerAutoSave();
             }
         }
-
         function redo() {
             const targetId = activeCanvasId || 'canvas-1';
             const stack = undoStacks[targetId];
@@ -638,11 +957,9 @@
                 triggerAutoSave();
             }
         }
-
         function addDrawingEvents(canvas) {
             const ctx = canvas.getContext('2d');
             const canvasId = canvas.id;
-            
             const startDraw = (e) => {
                 if (currentMode !== 'draw') return;
                 activeCanvasId = canvasId; 
@@ -651,7 +968,6 @@
                 const { x, y } = getPos(e, canvas);
                 [lastX, lastY] = [x, y];
             };
-            
             const draw = (e) => {
                 if (!isDrawing || currentMode !== 'draw') return;
                 if(e.type.includes('touch')) e.preventDefault(); 
@@ -659,7 +975,6 @@
                 ctx.beginPath();
                 ctx.moveTo(lastX, lastY);
                 ctx.lineTo(x, y);
-                
                 if (currentTool === 'eraser') {
                     ctx.globalCompositeOperation = 'destination-out';
                     ctx.lineWidth = 20; 
@@ -671,14 +986,12 @@
                 ctx.stroke();
                 [lastX, lastY] = [x, y];
             };
-            
             const stopDraw = () => {
                 if (isDrawing) {
                     isDrawing = false;
                     triggerAutoSave(); 
                 }
             };
-
             canvas.addEventListener('mousedown', startDraw);
             canvas.addEventListener('mousemove', draw);
             canvas.addEventListener('mouseup', stopDraw);
@@ -687,7 +1000,6 @@
             canvas.addEventListener('touchmove', draw, {passive: false});
             canvas.addEventListener('touchend', stopDraw);
         }
-
         function getPos(e, canvas) {
             const rect = canvas.getBoundingClientRect();
             let clientX, clientY;
@@ -703,17 +1015,12 @@
                 y: (clientY - rect.top) / currentZoom 
             };
         }
-
         function handleShortcuts(e) {
             if (currentMode === 'draw' && (e.ctrlKey || e.metaKey)) {
                 if (e.key === 'z') { e.preventDefault(); undo(); } 
                 else if (e.key === 'y') { e.preventDefault(); redo(); }
             }
         }
-
-        // === 4. 儲存控制邏輯 ===
-        
-        // 切換自動儲存
         function toggleAutoSave(checked) {
             isAutoSaveEnabled = checked;
             const status = document.getElementById('save-status');
@@ -721,7 +1028,7 @@
                 status.style.opacity = '1';
                 status.innerText = '自動儲存已開啟';
                 status.style.color = '#28a745';
-                triggerAutoSave(); // 立即觸發一次
+                triggerAutoSave(); 
                 setTimeout(() => { status.style.opacity = '0'; }, 2000);
             } else {
                 status.style.opacity = '1';
@@ -730,57 +1037,35 @@
                 setTimeout(() => { status.style.opacity = '0'; }, 2000);
             }
         }
-
-        // 觸發自動儲存 (僅當開啟時)
         function triggerAutoSave() {
             if (!isAutoSaveEnabled) return;
-            
             const status = document.getElementById('save-status');
             status.style.opacity = '0.5';
             status.innerText = '自動儲存中...';
             status.style.color = '#28a745';
-            
             clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                performSave(true);
-            }, 1000); 
+            saveTimeout = setTimeout(() => { performSave(true); }, 1000); 
         }
-
-        // 手動儲存
-        function manualSave() {
-            performSave(false);
-        }
-
-        // 執行儲存動作 (isAuto: 是否為自動觸發)
+        function manualSave() { performSave(false); }
         function performSave(isAuto) {
             const pagesData = [];
             const pages = document.querySelectorAll('.page');
-            
             pages.forEach(page => {
                 const pageId = page.id;
                 const type = page.getAttribute('data-page-type') || 'line';
-                const headerHTML = page.querySelector('.page-header').innerHTML;
+                const headerHTML = page.querySelector('.page-header') ? page.querySelector('.page-header').innerHTML : '';
                 const contentHTML = page.querySelector('.page-content').innerHTML; 
                 const canvas = page.querySelector('.drawing-layer');
                 const canvasData = canvas.toDataURL();
-                
-                pagesData.push({
-                    id: pageId,
-                    type: type,
-                    header: headerHTML,
-                    content: contentHTML,
-                    drawing: canvasData
-                });
+                pagesData.push({ id: pageId, type: type, header: headerHTML, content: contentHTML, drawing: canvasData });
             });
-
             const data = {
-                version: 5,
+                version: 6, 
                 notebookType: defaultPageType, 
                 zoom: currentZoom,
                 fontSize: getComputedStyle(document.documentElement).getPropertyValue('--user-font-size'),
                 pages: pagesData
             };
-
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
                 const status = document.getElementById('save-status');
@@ -793,25 +1078,22 @@
                 alert('⚠️ 警告：儲存空間已滿，無法儲存。');
             }
         }
-
         function loadData() {
             const json = localStorage.getItem(STORAGE_KEY);
             if (!json) return false;
-            
             try {
                 const data = JSON.parse(json);
                 if (data.zoom) setZoom(data.zoom);
                 if (data.fontSize) document.documentElement.style.setProperty('--user-font-size', data.fontSize);
                 if (data.notebookType) defaultPageType = data.notebookType; 
-                
                 data.pages.forEach(pageData => {
                     addNewPage(pageData.type, true); 
                     const pages = document.querySelectorAll('.page');
                     const currentPage = pages[pages.length - 1];
-                    
-                    currentPage.querySelector('.page-header').innerHTML = pageData.header;
+                    if (currentPage.querySelector('.page-header')) {
+                        currentPage.querySelector('.page-header').innerHTML = pageData.header;
+                    }
                     currentPage.querySelector('.page-content').innerHTML = pageData.content;
-                    
                     const canvas = currentPage.querySelector('.drawing-layer');
                     const ctx = canvas.getContext('2d');
                     const img = new Image();
@@ -830,15 +1112,12 @@
                 return false;
             }
         }
-
-        // === 5. 其他工具與介面 ===
         function resetNotebook() {
             if (confirm("⚠️ 警告：這將會刪除所有的頁面、文字和筆跡，並且重新開始。\n\n確定要重置嗎？")) {
                 localStorage.removeItem(STORAGE_KEY);
                 location.reload();
             }
         }
-
         function setZoom(val) {
             val = parseFloat(val);
             currentZoom = val;
@@ -859,37 +1138,29 @@
                 }
             }
         }
-
         function setMode(mode) {
             currentMode = mode;
             document.getElementById('btn-type').classList.toggle('active', mode === 'type');
             document.getElementById('btn-draw').classList.toggle('active', mode === 'draw');
             document.getElementById('draw-tools').style.display = mode === 'draw' ? 'flex' : 'none';
             document.getElementById('type-tools').style.display = mode === 'type' ? 'flex' : 'none';
-            
             const allPages = document.querySelectorAll('.page');
             allPages.forEach(page => {
-                if (mode === 'type') {
-                    page.classList.add('typing-mode');
-                } else {
-                    page.classList.remove('typing-mode');
-                }
+                if (mode === 'type') page.classList.add('typing-mode');
+                else page.classList.remove('typing-mode');
             });
         }
-
         function setPenColor(color, btn) {
             currentColor = color;
             setTool('pen'); 
             document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
             btn.classList.add('active');
         }
-
         function setTool(tool) {
             currentTool = tool;
             document.getElementById('tool-pen').classList.toggle('active', tool === 'pen');
             document.getElementById('tool-eraser').classList.toggle('active', tool === 'eraser');
         }
-
         function clearCanvas() {
             if(confirm("確定要清除所有手寫筆跡嗎？")) {
                 const allCanvases = document.querySelectorAll('.drawing-layer');
@@ -904,25 +1175,118 @@
                 triggerAutoSave();
             }
         }
-        
         function clearAllText() {
             if(confirm("確定要清除所有輸入文字嗎？")) {
-                document.querySelectorAll('.line-cell, .header-left, .header-right').forEach(div => {
+                document.querySelectorAll('.line-cell, .header-left, .header-right, .blank-sheet').forEach(div => {
                     div.innerText = '';
                 });
                 triggerAutoSave();
             }
         }
-
         function updateFontSize(val) {
             document.documentElement.style.setProperty('--user-font-size', val + 'px');
             triggerAutoSave();
         }
-        
-        function updateLineWidth(val) {
-            lineWidth = parseInt(val);
+        function updateLineWidth(val) { lineWidth = parseInt(val); }
+
+        // === 限制單字輸入 & 自動跳格 & 空白鍵跳格 ===
+        document.addEventListener('compositionstart', (e) => {
+            if (isGridCell(e.target)) e.target.isComposing = true;
+        });
+
+        document.addEventListener('compositionend', (e) => {
+            const target = e.target;
+            if (isGridCell(target)) {
+                target.isComposing = false;
+                checkAndLimitText(target);
+                if (target.innerText.trim().length > 0) moveToNextCell(target);
+            }
+        });
+
+        // 監聽 input 事件
+        document.addEventListener('input', (e) => {
+            const target = e.target;
+            if (isGridCell(target)) {
+                if (!target.isComposing) {
+                    checkAndLimitText(target);
+                    // 如果有字就跳
+                    if (target.innerText.trim().length > 0) moveToNextCell(target);
+                }
+                triggerAutoSave();
+            } else if (target.classList.contains('line-left') || 
+                       target.classList.contains('line-right') || 
+                       target.classList.contains('line-right-main') || 
+                       target.classList.contains('header-left') || 
+                       target.classList.contains('header-right') ||
+                       target.classList.contains('blank-sheet')) {
+                triggerAutoSave();
+            }
+        });
+
+        function checkAndLimitText(element) {
+            let text = element.innerText;
+            text = text.replace(/[\n\r]/g, '');
+            if (text.length > 1) {
+                element.innerText = text.substring(0, 1);
+                const range = document.createRange();
+                const sel = window.getSelection();
+                if (element.childNodes.length > 0) {
+                    range.selectNodeContents(element);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            } else if (element.innerText !== text) {
+                 element.innerText = text;
+            }
         }
 
+        // Updated: moveToNextCell to handle full-grid
+        function moveToNextCell(target) {
+            const currentRow = target.closest('.line-row');
+            
+            // Collect all cells in the current row based on type
+            let cells = [];
+            if (target.classList.contains('line-left-grid')) {
+                cells = Array.from(currentRow.querySelectorAll('.line-left-grid'));
+            } else if (target.classList.contains('line-right-grid')) {
+                cells = Array.from(currentRow.querySelectorAll('.line-right-grid'));
+            } else if (target.classList.contains('line-full-grid-cell')) {
+                cells = Array.from(currentRow.querySelectorAll('.line-full-grid-cell'));
+            } else {
+                // Fallback
+                return;
+            }
+
+            const idx = cells.indexOf(target);
+            
+            if (idx < cells.length - 1) {
+                // Move to next cell in same row
+                cells[idx + 1].focus();
+            } else {
+                // Move to next row
+                const nextRow = currentRow.nextElementSibling;
+                if (nextRow && nextRow.classList.contains('line-row')) {
+                    // Determine which class to look for in next row
+                    const selector = target.classList.contains('line-left-grid') ? '.line-left-grid' : 
+                                     target.classList.contains('line-right-grid') ? '.line-right-grid' : '.line-full-grid-cell';
+                    const nextCells = nextRow.querySelectorAll(selector);
+                    if (nextCells.length > 0) nextCells[0].focus();
+                } else {
+                    // Move to next page
+                    const page = currentRow.closest('.page');
+                    const nextPage = page.nextElementSibling;
+                    if (nextPage && nextPage.classList.contains('page')) {
+                        const selector = target.classList.contains('line-left-grid') ? '.line-left-grid' : 
+                                     target.classList.contains('line-right-grid') ? '.line-right-grid' : '.line-full-grid-cell';
+                        const firstInput = nextPage.querySelector(selector);
+                        if (firstInput) firstInput.focus();
+                    }
+                }
+            }
+        }
+
+        // 鍵盤導航 (Updated for Full Grid & Blank & Spacebar)
         document.addEventListener('keydown', function(e) {
             const target = e.target;
             const isLineCell = target.classList.contains('line-cell');
@@ -930,6 +1294,14 @@
 
             if (!isLineCell && !isHeader) return;
 
+            // Space key logic (New)
+            if (e.key === ' ' && isGridCell(target)) {
+                e.preventDefault();
+                moveToNextCell(target);
+                return;
+            }
+
+            // Enter key logic
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (isHeader) {
@@ -943,13 +1315,16 @@
                 if (nextRow && nextRow.classList.contains('line-row')) {
                     const allCellsInRow = Array.from(currentRow.querySelectorAll('.line-cell'));
                     const cellIndex = allCellsInRow.indexOf(target);
+                    
                     const allCellsInNextRow = Array.from(nextRow.querySelectorAll('.line-cell'));
+                    // Ensure we don't go out of bounds if next row has fewer cells
                     const targetCell = allCellsInNextRow[cellIndex] || allCellsInNextRow[allCellsInNextRow.length - 1];
                     if (targetCell) targetCell.focus();
                 }
                 return;
             }
 
+            // Arrow Up/Down
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (isHeader) {
@@ -968,7 +1343,8 @@
                     targetRow = currentRow.previousElementSibling;
                     if (!targetRow || !targetRow.classList.contains('line-row')) {
                         const page = target.closest('.page');
-                        if (target.classList.contains('line-left') || target.classList.contains('line-left-grid')) {
+                        // Return focus to header
+                        if (target.getBoundingClientRect().left < page.getBoundingClientRect().left + page.offsetWidth / 2) {
                              page.querySelector('.header-left').focus();
                         } else {
                              page.querySelector('.header-right').focus();
@@ -986,6 +1362,7 @@
                 return;
             }
 
+            // Arrow Left/Right
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 const sel = window.getSelection();
                 if (!sel.rangeCount || sel.type !== 'Caret') return;
