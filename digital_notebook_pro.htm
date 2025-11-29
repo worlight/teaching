@@ -30,6 +30,38 @@
             overflow: auto; 
         }
 
+        /* --- 雙底線樣式 --- */
+        .dbl-ul {
+            text-decoration: underline double;
+            text-underline-offset: 3px; 
+            text-decoration-thickness: 1px;
+        }
+        
+        /* --- 單底線樣式 --- */
+        .sgl-ul {
+            text-decoration: underline;
+            text-underline-offset: 3px; 
+            text-decoration-thickness: 1px;
+        }
+        
+        /* 方格專用樣式 */
+        .dbl-ul-cell {
+            text-decoration: underline double;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+        }
+        
+        .sgl-ul-cell {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+        }
+
+        /* --- 整行粗底線樣式 (New) --- */
+        .line-row.row-thick-border {
+            border-bottom: 3px solid #000 !important; /* 強制覆蓋原本的淺色線 */
+        }
+
         /* --- 分數樣式 --- */
         .fraction-group {
             display: inline-flex;
@@ -49,7 +81,6 @@
             content: "";
             display: inline-block;
         }
-
         .frac-part {
             display: inline-flex;
             flex-direction: column;
@@ -196,6 +227,14 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
             font-weight: bold;
         }
+        
+        /* 符號按鈕被選取的樣式 */
+        button.symbol-btn.active-tool {
+            background-color: #d1c4e9;
+            color: #4a148c;
+            border-color: #7b1fa2;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
 
         button.tool-btn {
             background-color: white;
@@ -290,6 +329,18 @@
             touch-action: none;
             cursor: crosshair;
         }
+        
+        /* --- 暫存繪圖層 --- */
+        .temp-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 25; 
+            pointer-events: none; 
+        }
+
         .page.typing-mode .drawing-layer {
             pointer-events: none;
             cursor: default;
@@ -362,7 +413,7 @@
         .line-cell {
             outline: none;
             display: flex;
-            align-items: center; /* 垂直置中 */
+            align-items: center; 
             box-sizing: border-box;
         }
         .line-cell:focus, .header-left:focus, .header-right:focus {
@@ -387,17 +438,17 @@
         /* --- 空白頁樣式 (純白) --- */
         .page.blank-page .page-header,
         .page.blank-page .red-margin-line {
-            display: none !important; /* 隱藏 Header 和 紅線 */
+            display: none !important; 
         }
         
         /* 空白頁的內容區 */
         .blank-sheet {
             width: 100%;
             height: 100%;
-            padding: 2cm; /* 類似 Word 的邊距 */
+            padding: 2cm; 
             box-sizing: border-box;
             outline: none;
-            white-space: pre-wrap; /* 保留換行 */
+            white-space: pre-wrap; 
             overflow: hidden;
             font-size: var(--user-font-size);
             line-height: 1.5;
@@ -500,27 +551,41 @@
 
         <!-- 數學符號工具列 -->
         <div class="control-group" id="math-tools" style="display: none; width: 100%; background: #f3e5f5; border: 1px solid #e1bee7; margin-top: 5px;">
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('+')">+</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('-')">-</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('×')">×</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('÷')">÷</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('=')">=</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('+')">+</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('-')">-</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('×')">×</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('÷')">÷</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('=')">=</button>
             <div style="width: 1px; height: 15px; background: #999; margin: 0 5px;"></div>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('>')">&gt;</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('<')">&lt;</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('≥')">≥</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('≤')">≤</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('≠')">≠</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('≈')">≈</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('>')">&gt;</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('<')">&lt;</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('≥')">≥</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('≤')">≤</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('≠')">≠</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('≈')">≈</button>
             <div style="width: 1px; height: 15px; background: #999; margin: 0 5px;"></div>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('(')">(</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol(')')">)</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('.')">.</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('%')">%</button>
-            <button class="tool-btn symbol-btn" onclick="insertSymbol('²')" title="平方">x²</button>
-            <button class="tool-btn symbol-btn" onclick="insertFraction()" title="插入分數 (帶分數/分數)">xy/z</button>
-            <!-- 快捷鍵說明按鈕 (New) -->
-            <button class="tool-btn symbol-btn" onclick="showShortcutHelp()" title="快捷鍵說明" style="background-color: #e3f2fd; color: #1565c0; font-size: 14px;">⌨️ 說明</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('(')">(</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol(')')">)</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('.')">.</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('%')">%</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertSymbol('²')" title="平方">x²</button>
+            <!-- 分數按鈕 -->
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertFraction(false)" title="分數 (分子/分母)">x/y</button>
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="insertFraction(true)" title="帶分數 (整數 分子/分母)">1 x/y</button>
+            <!-- 單底線符號 -->
+            <button class="tool-btn symbol-btn" id="btn-sgl-ul" onmousedown="event.preventDefault()" onclick="insertSingleUnderline()" title="單底線 (開關模式)">
+                <span style="text-decoration: underline;">U</span>
+            </button>
+            <!-- 雙底線符號 -->
+            <button class="tool-btn symbol-btn" id="btn-dbl-ul" onmousedown="event.preventDefault()" onclick="insertDoubleUnderline()" title="雙底線 (開關模式)">
+                <span style="text-decoration: underline double;">U</span>
+            </button>
+            <!-- 整行粗線符號 (New) -->
+            <button class="tool-btn symbol-btn" id="btn-row-line" onmousedown="event.preventDefault()" onclick="toggleRowLine()" title="整行粗線 (Alt + L)">
+                <div style="width: 100%; height: 8px; border-bottom: 3px solid black;"></div>
+            </button>
+            <!-- 快捷鍵說明按鈕 -->
+            <button class="tool-btn symbol-btn" onmousedown="event.preventDefault()" onclick="showShortcutHelp()" title="快捷鍵說明" style="background-color: #e3f2fd; color: #1565c0; font-size: 14px;">⌨️ 說明</button>
         </div>
 
         <!-- 繪圖工具 -->
@@ -528,15 +593,28 @@
             <div class="color-dot active" style="background: black;" onclick="setPenColor('black', this)"></div>
             <div class="color-dot" style="background: #ea4335;" onclick="setPenColor('#ea4335', this)"></div>
             <div class="color-dot" style="background: #1a73e8;" onclick="setPenColor('#1a73e8', this)"></div>
+            
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
-            <button class="tool-btn active" id="tool-pen" onclick="setTool('pen')">筆刷</button>
-            <button class="tool-btn" id="tool-eraser" onclick="setTool('eraser')">橡皮擦</button>
+            
+            <button class="tool-btn active" id="tool-pen" onclick="setTool('pen')" title="一般筆刷">筆刷</button>
+            <button class="tool-btn" id="tool-eraser" onclick="setTool('eraser')" title="橡皮擦">橡皮擦</button>
+            
+            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+            
+            <!-- 圖形插入按鈕 -->
+            <button class="tool-btn" id="tool-rect" onclick="setTool('rect')" title="插入矩形 (拖曳繪製)">⬜</button>
+            <button class="tool-btn" id="tool-circle" onclick="setTool('circle')" title="插入圓形 (拖曳繪製)">⚪</button>
+            <button class="tool-btn" id="tool-triangle" onclick="setTool('triangle')" title="插入三角形 (拖曳繪製)">△</button>
+
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
             <label style="font-size: 14px;">粗細:</label>
             <input type="range" min="1" max="10" value="2" style="width: 60px;" oninput="updateLineWidth(this.value)" title="調整筆畫粗細">
+
+            <!-- Undo/Redo -->
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
             <button class="tool-btn" onclick="undo()" title="復原 (Ctrl+Z)">↩️ 復原</button>
             <button class="tool-btn" onclick="redo()" title="重做 (Ctrl+Y)">↪️ 重做</button>
+
             <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
             <button class="tool-btn" onclick="clearCanvas()" style="color: #ea4335;">清空筆跡</button>
         </div>
@@ -593,7 +671,7 @@
         </div>
     </div>
 
-    <!-- 快捷鍵說明 Modal (New) -->
+    <!-- 快捷鍵說明 Modal -->
     <div id="shortcut-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeShortcutHelp()">&times;</span>
@@ -601,11 +679,13 @@
             <ul class="shortcut-list">
                 <li><span>乘號 (×)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">x</span></span></li>
                 <li><span>除號 (÷)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">/</span></span></li>
-                <li><span>分數 (xy/z)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">Shift</span> + <span class="key-badge">F</span></span></li>
+                <li><span>分數 (x/y)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">f</span></span></li>
+                <li><span>帶分數 (1 x/y)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">Shift</span> + <span class="key-badge">F</span></span></li>
                 <li><span>大於等於 (≥)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">&gt;</span></span></li>
                 <li><span>小於等於 (≤)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">&lt;</span></span></li>
                 <li><span>平方 (²)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">2</span></span></li>
                 <li><span>約等於 (≈)</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">`</span> (頓號鍵)</span></li>
+                <li><span>整行粗線</span> <span><span class="key-badge">Alt</span> + <span class="key-badge">L</span></span></li>
             </ul>
             <div style="text-align: center; margin-top: 20px;">
                 <button onclick="closeShortcutHelp()" style="background-color: #4285f4; color: white; padding: 8px 25px; border-radius: 20px;">知道了</button>
@@ -626,6 +706,8 @@
         let defaultPageType = 'line'; 
         let isAutoSaveEnabled = false; 
         let lastFocusedInput = null; 
+        let shapeStartX = 0;
+        let shapeStartY = 0;
 
         const undoStacks = {};
         const redoStacks = {};
@@ -645,17 +727,20 @@
             document.addEventListener('keydown', handleShortcuts);
             document.addEventListener('keydown', handleMathHotkeys);
             
-            // 監聽所有輸入格的 Focus 事件，記住最後一個位置
+            // 監聽 Focus 與 Selection Change 更新按鈕
             document.addEventListener('focusin', (e) => {
                 const t = e.target;
                 if (t.getAttribute('contenteditable') === 'true' || t.tagName === 'BUTTON') {
                     if (t.getAttribute('contenteditable') === 'true') {
                         lastFocusedInput = t;
+                        updateButtonStates();
                     }
                 }
             });
             
-            // 點擊 Modal 外部關閉
+            document.addEventListener('mouseup', updateButtonStates);
+            document.addEventListener('keyup', updateButtonStates);
+            
             window.onclick = function(event) {
                 const modal = document.getElementById('shortcut-modal');
                 if (event.target == modal) {
@@ -664,19 +749,73 @@
             }
         };
         
+        // === 更新按鈕狀態 ===
+        function updateButtonStates() {
+            const btnDbl = document.getElementById('btn-dbl-ul');
+            const btnSgl = document.getElementById('btn-sgl-ul');
+            const btnRowLine = document.getElementById('btn-row-line');
+            if (!btnDbl || !btnSgl || !btnRowLine) return;
+            
+            btnDbl.classList.remove('active-tool');
+            btnSgl.classList.remove('active-tool');
+            btnRowLine.classList.remove('active-tool');
+
+            if (!lastFocusedInput) return;
+            
+            // 整行粗線檢查
+            const row = lastFocusedInput.closest('.line-row');
+            if (row && row.classList.contains('row-thick-border')) {
+                btnRowLine.classList.add('active-tool');
+            }
+
+            // 方格模式檢查
+            if (isGridCell(lastFocusedInput)) {
+                if (lastFocusedInput.classList.contains('dbl-ul-cell')) {
+                    btnDbl.classList.add('active-tool');
+                } else if (lastFocusedInput.classList.contains('sgl-ul-cell')) {
+                    btnSgl.classList.add('active-tool');
+                }
+                return;
+            }
+
+            // 一般文字模式檢查
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+                let node = sel.anchorNode;
+                while(node && node !== lastFocusedInput && node !== document.body) {
+                    if (node.nodeType === 1) {
+                        if (node.classList.contains('dbl-ul')) {
+                            btnDbl.classList.add('active-tool');
+                            break;
+                        } else if (node.classList.contains('sgl-ul')) {
+                            btnSgl.classList.add('active-tool');
+                            break;
+                        }
+                    }
+                    node = node.parentNode;
+                }
+            }
+        }
+
         // ... (Math Tools functions) ...
         function handleMathHotkeys(e) {
             if (!lastFocusedInput || !e.altKey) return;
             let symbol = '';
             if (e.key === 'x' || e.key === 'X') symbol = '×';
             else if (e.key === '/') symbol = '÷';
+            else if (!e.shiftKey && e.key === 'f') {
+                e.preventDefault(); insertFraction(false); return;
+            }
             else if (e.shiftKey && (e.key === 'F' || e.key === 'f')) {
-                e.preventDefault(); insertFraction(); return;
+                e.preventDefault(); insertFraction(true); return;
             }
             else if (e.key === '>') symbol = '≥';
             else if (e.key === '<') symbol = '≤';
             else if (e.key === '2') symbol = '²';
             else if (e.key === '`') symbol = '≈';
+            else if (e.key === 'l' || e.key === 'L') { // 整行粗線 Hotkey
+                e.preventDefault(); toggleRowLine(); return;
+            }
 
             if (symbol) {
                 e.preventDefault();
@@ -689,7 +828,6 @@
             mathTools.style.display = mathTools.style.display === 'none' ? 'flex' : 'none';
         }
         
-        // === 快捷鍵說明 Modal 控制 (New) ===
         function showShortcutHelp() {
             document.getElementById('shortcut-modal').style.display = 'flex';
         }
@@ -711,17 +849,153 @@
                 }, 10);
             }
         }
+        
+        // === 整行粗線功能 (New) ===
+        function toggleRowLine() {
+            if (!lastFocusedInput) { alert("請先點選要畫線的行"); return; }
+            const row = lastFocusedInput.closest('.line-row');
+            if (row) {
+                row.classList.toggle('row-thick-border');
+                updateButtonStates();
+                triggerAutoSave();
+            }
+        }
 
-        function insertFraction() {
+        // === 插入/移除 單底線功能 ===
+        function insertSingleUnderline() {
+            if (!lastFocusedInput) { alert("請先點選要輸入的格子"); return; }
+            lastFocusedInput.focus();
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return;
+
+            if (isGridCell(lastFocusedInput)) {
+                lastFocusedInput.classList.remove('dbl-ul-cell'); 
+                lastFocusedInput.classList.toggle('sgl-ul-cell');
+                updateButtonStates();
+                triggerAutoSave();
+                return;
+            }
+            
+            applyUnderlineLogic(sel, 'sgl-ul');
+        }
+
+        // === 插入/移除 雙底線功能 ===
+        function insertDoubleUnderline() {
+            if (!lastFocusedInput) { alert("請先點選要輸入的格子"); return; }
+            lastFocusedInput.focus();
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return;
+
+            if (isGridCell(lastFocusedInput)) {
+                lastFocusedInput.classList.remove('sgl-ul-cell'); 
+                lastFocusedInput.classList.toggle('dbl-ul-cell');
+                updateButtonStates();
+                triggerAutoSave();
+                return;
+            }
+            
+            applyUnderlineLogic(sel, 'dbl-ul');
+        }
+
+        // === 共用底線邏輯 ===
+        function applyUnderlineLogic(sel, className) {
+            const otherClass = className === 'sgl-ul' ? 'dbl-ul' : 'sgl-ul';
+            let node = sel.anchorNode;
+            let existingSpan = null;
+
+            while(node && node !== lastFocusedInput) {
+                if (node.nodeType === 1 && (node.classList.contains(className) || node.classList.contains(otherClass))) {
+                    existingSpan = node;
+                    break;
+                }
+                node = node.parentNode;
+            }
+
+            if (existingSpan) {
+                if (existingSpan.classList.contains(className)) {
+                    const range = sel.getRangeAt(0);
+                    if (range.collapsed && isCursorAtEnd(range, existingSpan)) {
+                        moveCursorOut(existingSpan, range);
+                    } else {
+                        unwrapSpan(existingSpan);
+                    }
+                } else {
+                    existingSpan.classList.remove(otherClass);
+                    existingSpan.classList.add(className);
+                }
+            } else {
+                wrapSelectionWithClass(className, sel);
+            }
+            triggerAutoSave();
+            updateButtonStates();
+        }
+
+        function isCursorAtEnd(range, span) {
+            if (range.endContainer === span) {
+                return range.endOffset === span.childNodes.length;
+            }
+            if (range.endContainer.parentNode === span) {
+                return range.endOffset === range.endContainer.textContent.length && range.endContainer === span.lastChild;
+            }
+            return false;
+        }
+
+        function moveCursorOut(span, range) {
+            const zws = document.createTextNode("\u200B");
+            if (span.nextSibling) {
+                span.parentNode.insertBefore(zws, span.nextSibling);
+            } else {
+                span.parentNode.appendChild(zws);
+            }
+            range.setStart(zws, 1);
+            range.setEnd(zws, 1);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+        function unwrapSpan(span) {
+            const parent = span.parentNode;
+            while (span.firstChild) {
+                parent.insertBefore(span.firstChild, span);
+            }
+            parent.removeChild(span);
+        }
+
+        function wrapSelectionWithClass(className, sel) {
+            const range = sel.getRangeAt(0);
+            const span = document.createElement("span");
+            span.className = className;
+            
+            if (range.collapsed) {
+                const text = document.createTextNode("\u200B");
+                span.appendChild(text);
+                range.insertNode(span);
+                range.setStart(text, 1);
+                range.setEnd(text, 1);
+            } else {
+                span.appendChild(range.extractContents());
+                range.insertNode(span);
+            }
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+
+
+        // === 插入分數功能 ===
+        function insertFraction(isMixed) {
             if (!lastFocusedInput) { alert("請先點選要輸入的格子"); return; }
             lastFocusedInput.focus();
             const container = document.createElement("span");
             container.className = "fraction-group";
             container.contentEditable = "false"; 
             
-            const integerPart = document.createElement("span");
-            integerPart.className = "frac-integer";
-            integerPart.contentEditable = "true";
+            let integerPart = null;
+            if (isMixed) {
+                integerPart = document.createElement("span");
+                integerPart.className = "frac-integer";
+                integerPart.contentEditable = "true";
+            }
             
             const fracPart = document.createElement("span");
             fracPart.className = "frac-part";
@@ -736,7 +1010,7 @@
             
             fracPart.appendChild(numerator);
             fracPart.appendChild(denominator);
-            container.appendChild(integerPart);
+            if (integerPart) container.appendChild(integerPart);
             container.appendChild(fracPart);
             
             const sel = window.getSelection();
@@ -748,7 +1022,11 @@
                 range.setStartAfter(container);
                 range.insertNode(space);
                 const newRange = document.createRange();
-                newRange.selectNodeContents(integerPart);
+                if (integerPart) {
+                    newRange.selectNodeContents(integerPart);
+                } else {
+                    newRange.selectNodeContents(numerator);
+                }
                 newRange.collapse(false);
                 sel.removeAllRanges();
                 sel.addRange(newRange);
@@ -756,19 +1034,17 @@
             triggerAutoSave();
         }
 
-        // Helper check for grid cells
         function isGridCell(el) {
             return el.classList.contains('line-left-grid') || 
                    el.classList.contains('line-right-grid') || 
                    el.classList.contains('line-full-grid-cell');
         }
 
-        // === 2. 頁面生成 ===
+        // ... (Rest of the code: generateLinesHTML, updateNotebookType, addNewPage, initSingleCanvas, Drawing, Undo/Redo, etc. remain same) ...
         function generateLinesHTML(type) {
             if (type === 'blank') {
                 return '<div class="blank-sheet" contenteditable="true"></div>';
             }
-
             let html = '';
             for (let i = 0; i < 23; i++) {
                 if (type === 'line') {
@@ -809,8 +1085,6 @@
             pages.forEach(page => {
                 const oldType = page.getAttribute('data-page-type');
                 if (oldType === type) return;
-
-                // 備份文字
                 let allText = "";
                 if (oldType === 'blank') {
                     const sheet = page.querySelector('.blank-sheet');
@@ -824,12 +1098,9 @@
                     });
                     allText = lines.join('\n');
                 }
-
                 page.setAttribute('data-page-type', type);
-                
                 const redLine = page.querySelector('.red-margin-line');
                 const header = page.querySelector('.page-header');
-                
                 if (type === 'blank') {
                     page.classList.add('blank-page');
                     if(redLine) redLine.style.display = 'none';
@@ -839,11 +1110,8 @@
                     if(redLine) redLine.style.display = 'block';
                     if(header) header.style.borderBottom = '1px solid var(--line-color)';
                 }
-
                 const contentDiv = page.querySelector('.page-content');
                 contentDiv.innerHTML = generateLinesHTML(type);
-                
-                // 回填文字
                 if (type === 'blank') {
                     const sheet = contentDiv.querySelector('.blank-sheet');
                     if(sheet) sheet.innerText = allText;
@@ -867,6 +1135,7 @@
             const currentPages = document.querySelectorAll('.page').length;
             const newPageNum = currentPages + 1;
             const canvasId = `canvas-${newPageNum}`;
+            const tempCanvasId = `temp-canvas-${newPageNum}`; 
             const linesId = `lines-${newPageNum}`;
             const pageId = `page-${newPageNum}`;
 
@@ -882,6 +1151,7 @@
 
             pageDiv.innerHTML = `
                 <canvas id="${canvasId}" class="drawing-layer"></canvas>
+                <canvas id="${tempCanvasId}" class="temp-layer"></canvas>
                 <div class="red-margin-line" style="display: ${redLineDisplay}"></div>
                 <div class="page-header" style="border-bottom: ${headerBorder}">
                     <div class="header-left" contenteditable="true"></div>
@@ -897,7 +1167,8 @@
             undoStacks[canvasId] = [];
             redoStacks[canvasId] = [];
             const newCanvas = document.getElementById(canvasId);
-            initSingleCanvas(newCanvas);
+            const newTempCanvas = document.getElementById(tempCanvasId);
+            initSingleCanvas(newCanvas, newTempCanvas);
             setZoom(currentZoom);
             if (!restoreMode) {
                 pageDiv.scrollIntoView({ behavior: 'smooth' });
@@ -905,20 +1176,32 @@
             }
         }
 
-        function initSingleCanvas(canvas) {
+        function initSingleCanvas(canvas, tempCanvas) {
             if(canvas.getAttribute('data-init') === 'true') return;
             const parent = canvas.parentElement;
             const rect = parent.getBoundingClientRect();
             const scale = Math.min(window.devicePixelRatio || 2, 2); 
+            
             canvas.width = rect.width * scale;
             canvas.height = rect.height * scale;
             const ctx = canvas.getContext('2d');
             ctx.scale(scale, scale);
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            addDrawingEvents(canvas);
+            
+            if(tempCanvas) {
+                tempCanvas.width = rect.width * scale;
+                tempCanvas.height = rect.height * scale;
+                const tCtx = tempCanvas.getContext('2d');
+                tCtx.scale(scale, scale);
+                tCtx.lineCap = 'round';
+                tCtx.lineJoin = 'round';
+            }
+
+            addDrawingEvents(canvas, tempCanvas); 
             canvas.setAttribute('data-init', 'true');
         }
+
         function saveState(canvasId) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
@@ -929,6 +1212,7 @@
             if (undoStacks[canvasId].length > MAX_HISTORY) undoStacks[canvasId].shift(); 
             redoStacks[canvasId] = [];
         }
+
         function undo() {
             const targetId = activeCanvasId || 'canvas-1';
             const stack = undoStacks[targetId];
@@ -943,6 +1227,7 @@
                 triggerAutoSave();
             }
         }
+
         function redo() {
             const targetId = activeCanvasId || 'canvas-1';
             const stack = undoStacks[targetId];
@@ -957,41 +1242,124 @@
                 triggerAutoSave();
             }
         }
-        function addDrawingEvents(canvas) {
+
+        // Updated Drawing Events for Shapes & Pen
+        function addDrawingEvents(canvas, tempCanvas) {
             const ctx = canvas.getContext('2d');
+            const tCtx = tempCanvas ? tempCanvas.getContext('2d') : null;
             const canvasId = canvas.id;
+            
             const startDraw = (e) => {
                 if (currentMode !== 'draw') return;
-                activeCanvasId = canvasId; 
-                saveState(canvasId);
-                isDrawing = true;
+                activeCanvasId = canvasId;
+                
                 const { x, y } = getPos(e, canvas);
                 [lastX, lastY] = [x, y];
+                [shapeStartX, shapeStartY] = [x, y];
+                isDrawing = true;
+
+                // Save state before drawing
+                saveState(canvasId);
+                
+                if (currentTool === 'pen' || currentTool === 'eraser') {
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                }
             };
+            
             const draw = (e) => {
                 if (!isDrawing || currentMode !== 'draw') return;
                 if(e.type.includes('touch')) e.preventDefault(); 
+                
                 const { x, y } = getPos(e, canvas);
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(x, y);
-                if (currentTool === 'eraser') {
-                    ctx.globalCompositeOperation = 'destination-out';
-                    ctx.lineWidth = 20; 
-                } else {
-                    ctx.globalCompositeOperation = 'source-over';
+                
+                // Normal Drawing
+                if (currentTool === 'pen' || currentTool === 'eraser') {
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(x, y);
+                    if (currentTool === 'eraser') {
+                        ctx.globalCompositeOperation = 'destination-out';
+                        ctx.lineWidth = 20; 
+                    } else {
+                        ctx.globalCompositeOperation = 'source-over';
+                        ctx.strokeStyle = currentColor;
+                        ctx.lineWidth = lineWidth; 
+                    }
+                    ctx.stroke();
+                    [lastX, lastY] = [x, y];
+                }
+                // Shape Drawing (on temp layer)
+                else if (['rect', 'circle', 'triangle'].includes(currentTool) && tCtx) {
+                    // Clear temp layer
+                    tCtx.save();
+                    tCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    tCtx.restore();
+
+                    tCtx.beginPath();
+                    tCtx.strokeStyle = currentColor;
+                    tCtx.lineWidth = lineWidth;
+                    
+                    const width = x - shapeStartX;
+                    const height = y - shapeStartY;
+
+                    if (currentTool === 'rect') {
+                        tCtx.rect(shapeStartX, shapeStartY, width, height);
+                    } else if (currentTool === 'circle') {
+                        tCtx.beginPath();
+                        tCtx.ellipse(shapeStartX + width/2, shapeStartY + height/2, Math.abs(width)/2, Math.abs(height)/2, 0, 0, 2 * Math.PI);
+                    } else if (currentTool === 'triangle') {
+                        tCtx.beginPath();
+                        tCtx.moveTo(shapeStartX + width/2, shapeStartY); 
+                        tCtx.lineTo(shapeStartX, shapeStartY + height); 
+                        tCtx.lineTo(shapeStartX + width, shapeStartY + height); 
+                        tCtx.closePath();
+                    }
+                    tCtx.stroke();
+                }
+            };
+            
+            const stopDraw = (e) => {
+                if (!isDrawing) return;
+                isDrawing = false;
+
+                // Commit shape to main canvas
+                if (['rect', 'circle', 'triangle'].includes(currentTool) && tCtx) {
+                    const { x, y } = getPos(e, canvas);
+                    
+                    // Clear temp
+                    tCtx.save();
+                    tCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    tCtx.restore();
+
+                    // Draw on Main
+                    ctx.beginPath();
                     ctx.strokeStyle = currentColor;
-                    ctx.lineWidth = lineWidth; 
+                    ctx.lineWidth = lineWidth;
+                    ctx.globalCompositeOperation = 'source-over';
+
+                    const width = x - shapeStartX;
+                    const height = y - shapeStartY;
+
+                    if (currentTool === 'rect') {
+                        ctx.rect(shapeStartX, shapeStartY, width, height);
+                    } else if (currentTool === 'circle') {
+                        ctx.beginPath();
+                        ctx.ellipse(shapeStartX + width/2, shapeStartY + height/2, Math.abs(width)/2, Math.abs(height)/2, 0, 0, 2 * Math.PI);
+                    } else if (currentTool === 'triangle') {
+                        ctx.beginPath();
+                        ctx.moveTo(shapeStartX + width/2, shapeStartY);
+                        ctx.lineTo(shapeStartX, shapeStartY + height);
+                        ctx.lineTo(shapeStartX + width, shapeStartY + height);
+                        ctx.closePath();
+                    }
+                    ctx.stroke();
                 }
-                ctx.stroke();
-                [lastX, lastY] = [x, y];
+                triggerAutoSave(); 
             };
-            const stopDraw = () => {
-                if (isDrawing) {
-                    isDrawing = false;
-                    triggerAutoSave(); 
-                }
-            };
+
             canvas.addEventListener('mousedown', startDraw);
             canvas.addEventListener('mousemove', draw);
             canvas.addEventListener('mouseup', stopDraw);
@@ -1000,10 +1368,11 @@
             canvas.addEventListener('touchmove', draw, {passive: false});
             canvas.addEventListener('touchend', stopDraw);
         }
+
         function getPos(e, canvas) {
             const rect = canvas.getBoundingClientRect();
             let clientX, clientY;
-            if (e.changedTouches) {
+            if (e.changedTouches && e.changedTouches.length > 0) {
                 clientX = e.changedTouches[0].clientX;
                 clientY = e.changedTouches[0].clientY;
             } else {
@@ -1015,12 +1384,14 @@
                 y: (clientY - rect.top) / currentZoom 
             };
         }
+
         function handleShortcuts(e) {
             if (currentMode === 'draw' && (e.ctrlKey || e.metaKey)) {
                 if (e.key === 'z') { e.preventDefault(); undo(); } 
                 else if (e.key === 'y') { e.preventDefault(); redo(); }
             }
         }
+
         function toggleAutoSave(checked) {
             isAutoSaveEnabled = checked;
             const status = document.getElementById('save-status');
@@ -1060,7 +1431,7 @@
                 pagesData.push({ id: pageId, type: type, header: headerHTML, content: contentHTML, drawing: canvasData });
             });
             const data = {
-                version: 6, 
+                version: 7, 
                 notebookType: defaultPageType, 
                 zoom: currentZoom,
                 fontSize: getComputedStyle(document.documentElement).getPropertyValue('--user-font-size'),
@@ -1142,8 +1513,22 @@
             currentMode = mode;
             document.getElementById('btn-type').classList.toggle('active', mode === 'type');
             document.getElementById('btn-draw').classList.toggle('active', mode === 'draw');
-            document.getElementById('draw-tools').style.display = mode === 'draw' ? 'flex' : 'none';
-            document.getElementById('type-tools').style.display = mode === 'type' ? 'flex' : 'none';
+            
+            const drawTools = document.getElementById('draw-tools');
+            const typeTools = document.getElementById('type-tools');
+            const mathToolsBtn = document.querySelector('button[onclick="toggleMathSymbols()"]');
+            
+            if (mode === 'draw') {
+                drawTools.style.display = 'flex';
+                typeTools.style.display = 'none';
+                if(mathToolsBtn) mathToolsBtn.style.display = 'none'; 
+                document.getElementById('math-tools').style.display = 'none';
+            } else {
+                drawTools.style.display = 'none';
+                typeTools.style.display = 'flex';
+                if(mathToolsBtn) mathToolsBtn.style.display = 'inline-block';
+            }
+            
             const allPages = document.querySelectorAll('.page');
             allPages.forEach(page => {
                 if (mode === 'type') page.classList.add('typing-mode');
@@ -1152,7 +1537,6 @@
         }
         function setPenColor(color, btn) {
             currentColor = color;
-            setTool('pen'); 
             document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('active'));
             btn.classList.add('active');
         }
@@ -1160,6 +1544,9 @@
             currentTool = tool;
             document.getElementById('tool-pen').classList.toggle('active', tool === 'pen');
             document.getElementById('tool-eraser').classList.toggle('active', tool === 'eraser');
+            document.getElementById('tool-rect').classList.toggle('active', tool === 'rect');
+            document.getElementById('tool-circle').classList.toggle('active', tool === 'circle');
+            document.getElementById('tool-triangle').classList.toggle('active', tool === 'triangle');
         }
         function clearCanvas() {
             if(confirm("確定要清除所有手寫筆跡嗎？")) {
@@ -1179,6 +1566,8 @@
             if(confirm("確定要清除所有輸入文字嗎？")) {
                 document.querySelectorAll('.line-cell, .header-left, .header-right, .blank-sheet').forEach(div => {
                     div.innerText = '';
+                    div.classList.remove('dbl-ul-cell');
+                    div.classList.remove('sgl-ul-cell');
                 });
                 triggerAutoSave();
             }
@@ -1189,11 +1578,9 @@
         }
         function updateLineWidth(val) { lineWidth = parseInt(val); }
 
-        // === 限制單字輸入 & 自動跳格 & 空白鍵跳格 ===
         document.addEventListener('compositionstart', (e) => {
             if (isGridCell(e.target)) e.target.isComposing = true;
         });
-
         document.addEventListener('compositionend', (e) => {
             const target = e.target;
             if (isGridCell(target)) {
@@ -1202,14 +1589,11 @@
                 if (target.innerText.trim().length > 0) moveToNextCell(target);
             }
         });
-
-        // 監聽 input 事件
         document.addEventListener('input', (e) => {
             const target = e.target;
             if (isGridCell(target)) {
                 if (!target.isComposing) {
                     checkAndLimitText(target);
-                    // 如果有字就跳
                     if (target.innerText.trim().length > 0) moveToNextCell(target);
                 }
                 triggerAutoSave();
@@ -1222,7 +1606,6 @@
                 triggerAutoSave();
             }
         });
-
         function checkAndLimitText(element) {
             let text = element.innerText;
             text = text.replace(/[\n\r]/g, '');
@@ -1236,44 +1619,25 @@
                     sel.removeAllRanges();
                     sel.addRange(range);
                 }
-            } else if (element.innerText !== text) {
-                 element.innerText = text;
-            }
+            } else if (element.innerText !== text) element.innerText = text;
         }
-
-        // Updated: moveToNextCell to handle full-grid
         function moveToNextCell(target) {
             const currentRow = target.closest('.line-row');
-            
-            // Collect all cells in the current row based on type
             let cells = [];
-            if (target.classList.contains('line-left-grid')) {
-                cells = Array.from(currentRow.querySelectorAll('.line-left-grid'));
-            } else if (target.classList.contains('line-right-grid')) {
-                cells = Array.from(currentRow.querySelectorAll('.line-right-grid'));
-            } else if (target.classList.contains('line-full-grid-cell')) {
-                cells = Array.from(currentRow.querySelectorAll('.line-full-grid-cell'));
-            } else {
-                // Fallback
-                return;
-            }
-
+            if (target.classList.contains('line-left-grid')) cells = Array.from(currentRow.querySelectorAll('.line-left-grid'));
+            else if (target.classList.contains('line-right-grid')) cells = Array.from(currentRow.querySelectorAll('.line-right-grid'));
+            else if (target.classList.contains('line-full-grid-cell')) cells = Array.from(currentRow.querySelectorAll('.line-full-grid-cell'));
+            else return;
             const idx = cells.indexOf(target);
-            
-            if (idx < cells.length - 1) {
-                // Move to next cell in same row
-                cells[idx + 1].focus();
-            } else {
-                // Move to next row
+            if (idx < cells.length - 1) cells[idx + 1].focus();
+            else {
                 const nextRow = currentRow.nextElementSibling;
                 if (nextRow && nextRow.classList.contains('line-row')) {
-                    // Determine which class to look for in next row
                     const selector = target.classList.contains('line-left-grid') ? '.line-left-grid' : 
                                      target.classList.contains('line-right-grid') ? '.line-right-grid' : '.line-full-grid-cell';
                     const nextCells = nextRow.querySelectorAll(selector);
                     if (nextCells.length > 0) nextCells[0].focus();
                 } else {
-                    // Move to next page
                     const page = currentRow.closest('.page');
                     const nextPage = page.nextElementSibling;
                     if (nextPage && nextPage.classList.contains('page')) {
@@ -1285,23 +1649,16 @@
                 }
             }
         }
-
-        // 鍵盤導航 (Updated for Full Grid & Blank & Spacebar)
         document.addEventListener('keydown', function(e) {
             const target = e.target;
             const isLineCell = target.classList.contains('line-cell');
             const isHeader = target.classList.contains('header-left') || target.classList.contains('header-right');
-
             if (!isLineCell && !isHeader) return;
-
-            // Space key logic (New)
             if (e.key === ' ' && isGridCell(target)) {
                 e.preventDefault();
                 moveToNextCell(target);
                 return;
             }
-
-            // Enter key logic
             if (e.key === 'Enter') {
                 e.preventDefault();
                 if (isHeader) {
@@ -1315,16 +1672,12 @@
                 if (nextRow && nextRow.classList.contains('line-row')) {
                     const allCellsInRow = Array.from(currentRow.querySelectorAll('.line-cell'));
                     const cellIndex = allCellsInRow.indexOf(target);
-                    
                     const allCellsInNextRow = Array.from(nextRow.querySelectorAll('.line-cell'));
-                    // Ensure we don't go out of bounds if next row has fewer cells
                     const targetCell = allCellsInNextRow[cellIndex] || allCellsInNextRow[allCellsInNextRow.length - 1];
                     if (targetCell) targetCell.focus();
                 }
                 return;
             }
-
-            // Arrow Up/Down
             if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (isHeader) {
@@ -1343,7 +1696,6 @@
                     targetRow = currentRow.previousElementSibling;
                     if (!targetRow || !targetRow.classList.contains('line-row')) {
                         const page = target.closest('.page');
-                        // Return focus to header
                         if (target.getBoundingClientRect().left < page.getBoundingClientRect().left + page.offsetWidth / 2) {
                              page.querySelector('.header-left').focus();
                         } else {
@@ -1361,15 +1713,12 @@
                 }
                 return;
             }
-
-            // Arrow Left/Right
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 const sel = window.getSelection();
                 if (!sel.rangeCount || sel.type !== 'Caret') return;
                 const len = target.innerText.length;
                 const start = (sel.anchorOffset === 0);
                 const end = (sel.anchorOffset === len);
-
                 if (isHeader) {
                     if (target.classList.contains('header-right') && e.key === 'ArrowLeft' && start) {
                         e.preventDefault(); target.parentElement.querySelector('.header-left').focus();
@@ -1379,11 +1728,9 @@
                     }
                     return;
                 }
-
                 const currentRow = target.closest('.line-row');
                 const allCellsInRow = Array.from(currentRow.querySelectorAll('.line-cell'));
                 const cellIndex = allCellsInRow.indexOf(target);
-
                 if (e.key === 'ArrowLeft' && start) {
                     if (cellIndex > 0) {
                         e.preventDefault();
@@ -1398,7 +1745,6 @@
                 }
             }
         });
-
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().catch(err => console.log(err));
